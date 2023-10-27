@@ -88,14 +88,37 @@ function draw() {
 
 function CreateSurfaceData()
 {
-    let vertexList = [];
+    // Constants
+    const numPointsU = 100; // Number of points in the u direction
+    const numPointsR = 100; // Number of points in the r direction
+    const a = 1; // damping coefficient
+    const b = 1; // length of the straight line segment
+    const m = 5; // number of half-waves
+    const fi = Math.PI / 4;
+    const rMax = 2.0; // Maximum r value
 
-    for (let i=0; i<360; i+=5) {
-        vertexList.push( Math.sin(deg2rad(i)), 1, Math.cos(deg2rad(i)) );
-        vertexList.push( Math.sin(deg2rad(i)), 0, Math.cos(deg2rad(i)) );
+    // Create an array to hold the vertices
+    const vertexList = [];
+
+    // Function to convert degrees to radians
+
+
+    for (let i = 0; i < numPointsU; i++) {
+        for (let j = 0; j < numPointsR; j++) {
+            const u = (i * 2 * Math.PI) / numPointsU; // Full revolution
+            const r = (j / numPointsR) * rMax;
+
+            // Calculate the x, y, and z coordinates based on the parametric equations
+            const x = r * Math.cos(u);
+            const y = r * Math.sin(u);
+            const z = a * Math.exp(-Math.PI * r) * Math.sin((m * Math.PI * r) / b + fi);
+
+            // Push the coordinates to the vertexList
+            vertexList.push(x, y, z);
+        }
     }
-
     return vertexList;
+    // Use the vertexList to render your surface of revolution
 }
 
 
