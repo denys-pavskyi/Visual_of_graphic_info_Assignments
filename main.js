@@ -5,9 +5,72 @@ let surface;                    // A surface model
 let shProgram;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
 
+
+let numPointsU = 125; // Number of points in the u direction
+let numPointsV = 125; // Number of points in the v direction
+let damping_coef = 1; // damping coefficient
+let b = 1; // length of the straight line segment
+let m = 5; // number of half-waves
+let fi = Math.PI / 4;
+let rMax = 1.5; // Maximum r value
+
+
 function deg2rad(angle) {
     return angle * Math.PI / 180;
 }
+
+function updateValue(elementId) {
+    const range = document.getElementById(elementId);
+    const valueDisplay = document.getElementById(elementId + "_value");
+    valueDisplay.textContent = range.value;
+}
+
+function retrieveValuesFromInputs() {
+    numPointsU  = parseInt(document.getElementById('u_points').value);
+    numPointsV  = parseInt(document.getElementById('v_points').value);
+    damping_coef = parseFloat(document.getElementById('damping').value);
+    b = parseFloat(document.getElementById('length').value);
+    m = parseInt(document.getElementById('waves').value);
+    fi = deg2rad(parseInt(document.getElementById('phase').value));
+
+    surface = new Model('Surface');
+    surface.BufferData(CreateSurfaceData());
+    draw();
+}
+
+// Add event listeners to update displayed values when inputs change
+document.getElementById('u_points').addEventListener('input', function() {
+    updateValue('u_points');
+    retrieveValuesFromInputs();
+});
+document.getElementById('v_points').addEventListener('input', function() {
+    updateValue('v_points');
+    retrieveValuesFromInputs();
+});
+document.getElementById('damping').addEventListener('input', function() {
+    updateValue('damping');
+    retrieveValuesFromInputs();
+});
+document.getElementById('length').addEventListener('input', function() {
+    updateValue('length');
+    retrieveValuesFromInputs();
+});
+document.getElementById('waves').addEventListener('input', function() {
+    updateValue('waves');
+    retrieveValuesFromInputs();
+});
+document.getElementById('phase').addEventListener('input', function() {
+    updateValue('phase');
+    retrieveValuesFromInputs();
+});
+
+//Initialize displayed values on page load
+updateValue('u_points');
+updateValue('v_points');
+updateValue('damping');
+updateValue('length');
+updateValue('waves');
+updateValue('phase');
 
 
 // Constructor
@@ -54,7 +117,7 @@ function ShaderProgram(name, program) {
 }
 
 
-/* Draws a colored cube, along with a set of coordinate axes.
+/* Draws a Surface of Revolution with Damping Circular Waves, along with a set of coordinate axes.
  * (Note that the use of the above drawPrimitive function is not an efficient
  * way to draw with WebGL.  Here, the geometry is so simple that it doesn't matter.)
  */
@@ -88,28 +151,19 @@ function draw() {
 
 function CreateSurfaceData()
 {
-    // Constants
-    const numPointsU = 125; // Number of points in the u direction
-    const numPointsR = 125; // Number of points in the r direction
-    const a = 1; // damping coefficient
-    const b = 1; // length of the straight line segment
-    const m = 5; // number of half-waves
-    const fi = Math.PI / 4;
-    const rMax = 1.5; // Maximum r value
 
-    
     const vertexList = [];
 
    
     for (let i = 0; i < numPointsU; i++) {
-        for (let j = 0; j < numPointsR; j++) {
+        for (let j = 0; j < numPointsV; j++) {
             const u = (i * 2 * Math.PI) / numPointsU; // Full revolution
-            const r = (j / numPointsR) * rMax;
+            const r = (j / numPointsV) * rMax;
 
             // Calculate the x, y, and z coordinates based on the parametric equations
             const x = r * Math.cos(u);
             const y = r * Math.sin(u);
-            const z = a * Math.exp(-Math.PI * r) * Math.sin((m * Math.PI * r) / b + fi);
+            const z = damping_coef * Math.exp(-Math.PI * r) * Math.sin((m * Math.PI * r) / b + fi);
 
             
             vertexList.push(x, y, z);
@@ -131,6 +185,7 @@ function initGL() {
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
     shProgram.iColor                     = gl.getUniformLocation(prog, "color");
 
+    
     surface = new Model('Surface');
     surface.BufferData(CreateSurfaceData());
 
