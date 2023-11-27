@@ -12,21 +12,22 @@
 <script src="./Utils/trackball-rotator.js"></script>
 <script src="./Utils/m4.js"></script>
 <script src="./shader.gpu"></script>
-<script src="./main.js" defer></script>
+<script type="module" src="./main.js" defer></script>
+
 
 </head>
 
 
-<body onload="init()">
+<body>
 
     <h2>A "Surface of Revolution with Damping Circular Waves" with "Trackball" Mouse Rotation</h2>
 
     <label for="u_points">Number of points in u direction:</label>
-    <input type="range" id="u_points" min="25" max="400" step="5" value="125">
+    <input type="range" id="u_points" min="1" max="400" step="2" value="30">
     <span id="u_points_value"></span><br><br>
 
     <label for="v_points">Number of points in v direction:</label>
-    <input type="range" id="v_points" min="25" max="400" step="5" value="125">
+    <input type="range" id="v_points" min="1" max="400" step="5" value="20">
     <span id="v_points_value"></span><br><br>
 
     <label for="damping">Damping Coefficient:</label>
@@ -45,6 +46,7 @@
     <input type="range" id="phase" min="0" max="360" step="5" value="45">
     <span id="phase_value"></span><br><br>
 
+    <button id="testButton"> Test </button>
 
     <p id="message">Drag your mouse to rotate surface.<br>
     (On a touch screen, you can use your finger.)</p>
@@ -57,6 +59,9 @@
 
 </body>
 
-
+<script type="module">
+    import {init} from './main.js';
+    init();
+</script>
 
 </html>

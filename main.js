@@ -1,5 +1,9 @@
 'use strict';
 
+import Point from './Point.js';
+import Triangle from './Triangle.js';
+
+
 let gl;                         // The webgl context.
 let surface;                    // A surface model
 let shProgram;                  // A shader program
@@ -13,6 +17,8 @@ let b = 1; // length of the straight line segment
 let m = 5; // number of half-waves
 let fi = Math.PI / 4;
 let rMax = 1.5; // Maximum r value
+
+let color = [0, 1, 0, 0];
 
 
 function deg2rad(angle) {
@@ -33,6 +39,10 @@ function retrieveValuesFromInputs() {
     m = parseInt(document.getElementById('waves').value);
     fi = deg2rad(parseInt(document.getElementById('phase').value));
 
+    
+}
+
+function reDraw(){
     surface = new Model('Surface');
     surface.BufferData(CreateSurfaceData());
     draw();
@@ -42,26 +52,32 @@ function retrieveValuesFromInputs() {
 document.getElementById('u_points').addEventListener('input', function() {
     updateValue('u_points');
     retrieveValuesFromInputs();
+    reDraw();
 });
 document.getElementById('v_points').addEventListener('input', function() {
     updateValue('v_points');
     retrieveValuesFromInputs();
+    reDraw();
 });
 document.getElementById('damping').addEventListener('input', function() {
     updateValue('damping');
     retrieveValuesFromInputs();
+    reDraw();
 });
 document.getElementById('length').addEventListener('input', function() {
     updateValue('length');
     retrieveValuesFromInputs();
+    reDraw();
 });
 document.getElementById('waves').addEventListener('input', function() {
     updateValue('waves');
     retrieveValuesFromInputs();
+    reDraw();
 });
 document.getElementById('phase').addEventListener('input', function() {
     updateValue('phase');
     retrieveValuesFromInputs();
+    reDraw();
 });
 
 //Initialize displayed values on page load
@@ -73,27 +89,48 @@ updateValue('waves');
 updateValue('phase');
 
 
-// Constructor
+//Constructor
+
+// function Model(name) {
+//     this.name = name;
+//     this.iVertexBuffer = gl.createBuffer();
+//     this.count = 0;
+
+//     this.BufferData = function(vertices) {
+
+//         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
+//         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STREAM_DRAW);
+
+//         this.count = vertices.length/3;
+//     }
+
+//     this.Draw = function() {
+
+//         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
+//         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
+//         gl.enableVertexAttribArray(shProgram.iAttribVertex);
+   
+//         gl.drawArrays(gl.LINE_STRIP, 0, this.count);
+//     }
+// }
+
 function Model(name) {
     this.name = name;
     this.iVertexBuffer = gl.createBuffer();
     this.count = 0;
 
     this.BufferData = function(vertices) {
-
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STREAM_DRAW);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        this.count = vertices.length / 3;
 
-        this.count = vertices.length/3;
     }
 
     this.Draw = function() {
-
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribVertex);
-   
-        gl.drawArrays(gl.LINE_STRIP, 0, this.count);
+        gl.drawArrays(gl.TRIANGLES, 0, this.count);
     }
 }
 
@@ -117,10 +154,7 @@ function ShaderProgram(name, program) {
 }
 
 
-/* Draws a Surface of Revolution with Damping Circular Waves, along with a set of coordinate axes.
- * (Note that the use of the above drawPrimitive function is not an efficient
- * way to draw with WebGL.  Here, the geometry is so simple that it doesn't matter.)
- */
+// Draws a Surface of Revolution with Damping Circular Waves, along with a set of coordinate axes.
 function draw() { 
     gl.clearColor(0,0,0,1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -143,32 +177,86 @@ function draw() {
 
     gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection );
     
-    /* Draw the six faces of a cube, with different colors. */
-    gl.uniform4fv(shProgram.iColor, [1,1,0,1] );
+
+    gl.uniform4fv(shProgram.iColor, color );
 
     surface.Draw();
 }
 
+const testButton = document.getElementById('testButton');
+
+// Add an event listener to the button
+testButton.addEventListener('click', test);
+
+function test(){
+    color = [1, 0, 0, 0];
+    reDraw();
+}
+
+
 function CreateSurfaceData()
 {
+    
 
     const vertexList = [];
 
+    // vertexList.push(0,0,0);
+    // vertexList.push(0.5,0,0);
+    // vertexList.push(0.3,0.7,0);
+    
+    // vertexList.push(0,0,0);
+    // vertexList.push(0,0,0.5);
+    // vertexList.push(0,0.7,0.3);
    
+
+
+    // for (let i = 0; i < numPointsU; i++) {
+    //     for (let j = 0; j < numPointsV; j++) {
+    //         const u = (i * 2 * Math.PI) / numPointsU; // Full revolution
+    //         const r = (j / numPointsV) * rMax;
+
+    //         // Calculate the x, y, and z coordinates based on the parametric equations
+    //         const x = r * Math.cos(u);
+    //         const y = r * Math.sin(u);
+    //         const z = damping_coef * Math.exp(-Math.PI * r) * Math.sin((m * Math.PI * r) / b + fi);
+
+        
+    //         vertexList.push(x, y, z);
+    //     }
+    // }
+
+    
     for (let i = 0; i < numPointsU; i++) {
         for (let j = 0; j < numPointsV; j++) {
-            const u = (i * 2 * Math.PI) / numPointsU; // Full revolution
-            const r = (j / numPointsV) * rMax;
-
-            // Calculate the x, y, and z coordinates based on the parametric equations
-            const x = r * Math.cos(u);
-            const y = r * Math.sin(u);
-            const z = damping_coef * Math.exp(-Math.PI * r) * Math.sin((m * Math.PI * r) / b + fi);
-
+            const u1 = (i * 2 * Math.PI) / numPointsU; // Full revolution for i
+            const u2 = ((i + 1) * 2 * Math.PI) / numPointsU; // Full revolution for i+1
+            const v1 = (j / numPointsV) * rMax; // Height for j
+            const v2 = ((j + 1) / numPointsV) * rMax; // Height for j+1
+    
             
-            vertexList.push(x, y, z);
+            const x1 = v1 * Math.cos(u1);
+            const y1 = v1 * Math.sin(u1);
+            const z1 = damping_coef * Math.exp(-Math.PI * v1) * Math.sin((m * Math.PI * v1) / b + fi);
+    
+            const x2 = v1 * Math.cos(u2);
+            const y2 = v1 * Math.sin(u2);
+            const z2 = damping_coef * Math.exp(-Math.PI * v1) * Math.sin((m * Math.PI * v1) / b + fi);
+    
+            const x3 = v2 * Math.cos(u1);
+            const y3 = v2 * Math.sin(u1);
+            const z3 = damping_coef * Math.exp(-Math.PI * v2) * Math.sin((m * Math.PI * v2) / b + fi);
+    
+            const x4 = v2 * Math.cos(u2);
+            const y4 = v2 * Math.sin(u2);
+            const z4 = damping_coef * Math.exp(-Math.PI * v2) * Math.sin((m * Math.PI * v2) / b + fi);
+    
+            
+            vertexList.push(x1, y1, z1, x3, y3, z3, x2, y2, z2);
+            vertexList.push(x2, y2, z2, x3, y3, z3, x4, y4, z4);
         }
     }
+
+
     return vertexList;
 
 }
@@ -177,7 +265,7 @@ function CreateSurfaceData()
 /* Initialize the WebGL context. Called from init() */
 function initGL() {
     let prog = createProgram( gl, vertexShaderSource, fragmentShaderSource );
-
+    retrieveValuesFromInputs();
     shProgram = new ShaderProgram('Basic', prog);
     shProgram.Use();
 
@@ -224,11 +312,10 @@ function createProgram(gl, vShader, fShader) {
     return prog;
 }
 
-
 /**
  * initialization function that will be called when the page has loaded
  */
-function init() {
+export function init() {
     let canvas;
     try {
         canvas = document.getElementById("webglcanvas");
