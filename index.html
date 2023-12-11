@@ -23,7 +23,7 @@
     <h2>A "Surface of Revolution with Damping Circular Waves" with "Trackball" Mouse Rotation</h2>
 
     <label for="u_points">Number of points in u direction:</label>
-    <input type="range" id="u_points" min="1" max="400" step="2" value="30">
+    <input type="range" id="u_points" min="1" max="400" step="2" value="43">
     <span id="u_points_value"></span><br><br>
 
     <label for="v_points">Number of points in v direction:</label>
@@ -44,9 +44,18 @@
 
     <label for="phase">Phase Angle:</label>
     <input type="range" id="phase" min="0" max="360" step="5" value="45">
-    <span id="phase_value"></span><br><br>
+    <span id="phase_value"></span><br><br><br>
 
-    <button id="testButton"> Test </button>
+    <label>Light position:</label>
+    <input type="range" id="x_light" min="-600" max="360" step="15" value="40">
+    <input type="range" id="y_light" min="-600" max="360" step="15" value="340">
+    <input type="range" id="z_light" min="-600" max="360" step="15" value="180">
+    <br>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
+    X = <span id="x_light_value"></span>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
+    Y = <span id="y_light_value"></span>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
+    Z = <span id="z_light_value"></span>
+    <br>
+
 
     <p id="message">Drag your mouse to rotate surface.<br>
     (On a touch screen, you can use your finger.)</p>
