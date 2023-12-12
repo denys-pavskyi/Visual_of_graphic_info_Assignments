@@ -111,29 +111,6 @@ updateValue('z_light');
 
 //Constructor
 
-// function Model(name) {
-//     this.name = name;
-//     this.iVertexBuffer = gl.createBuffer();
-//     this.count = 0;
-
-//     this.BufferData = function(vertices) {
-
-//         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
-//         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STREAM_DRAW);
-
-//         this.count = vertices.length/3;
-//     }
-
-//     this.Draw = function() {
-
-//         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
-//         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
-//         gl.enableVertexAttribArray(shProgram.iAttribVertex);
-   
-//         gl.drawArrays(gl.LINE_STRIP, 0, this.count);
-//     }
-// }
-
 function Model(name) {
     this.name = name;
     this.iVertexBuffer = gl.createBuffer();
@@ -227,7 +204,7 @@ function draw() {
 
 
 
-//////////////////////////////////////TEST
+// Normal Facet Average
 
 function CreateSurfaceData()
 {
@@ -334,77 +311,6 @@ function CreateSurfaceData()
 
 }
 
-//////////////////////////////////////////
-
-
-
-// function CreateSurfaceData()
-// {
-
-//     const vertexList = [];
-//     normals = [];
-
-//     for (let i = 0; i < numPointsU; i++) {
-//         for (let j = 0; j < numPointsV; j++) {
-//             const u1 = (i * 2 * Math.PI) / numPointsU; // Full revolution for i
-//             const u2 = ((i + 1) * 2 * Math.PI) / numPointsU; // Full revolution for i+1
-//             const v1 = (j / numPointsV) * rMax; // Height for j
-//             const v2 = ((j + 1) / numPointsV) * rMax; // Height for j+1
-    
-//             //vertices
-//             const x1 = v1 * Math.cos(u1);
-//             const y1 = v1 * Math.sin(u1);
-//             const z1 = damping_coef * Math.exp(-Math.PI * v1) * Math.sin((m * Math.PI * v1) / b + fi);
-    
-//             const x2 = v1 * Math.cos(u2);
-//             const y2 = v1 * Math.sin(u2);
-//             const z2 = damping_coef * Math.exp(-Math.PI * v1) * Math.sin((m * Math.PI * v1) / b + fi);
-    
-//             const x3 = v2 * Math.cos(u1);
-//             const y3 = v2 * Math.sin(u1);
-//             const z3 = damping_coef * Math.exp(-Math.PI * v2) * Math.sin((m * Math.PI * v2) / b + fi);
-    
-//             const x4 = v2 * Math.cos(u2);
-//             const y4 = v2 * Math.sin(u2);
-//             const z4 = damping_coef * Math.exp(-Math.PI * v2) * Math.sin((m * Math.PI * v2) / b + fi);
-        
-
-//             vertexList.push(x1, y1, z1, x3, y3, z3, x2, y2, z2);
-//             vertexList.push(x2, y2, z2, x3, y3, z3, x4, y4, z4);
-            
-            
-            
-//             //normals
-//             let vec21 = { x: x2-x1, y: y2-y1, z: z2-z1 };
-//             let vec31 = { x: x3-x1, y: y3-y1, z: z3-z1 };
-//             let nor1 = vec3_CrossProduct(vec21, vec31);
-//             vec3_Normalize(nor1);
-//             normals.push(nor1.x, nor1.y, nor1.z);
-//             normals.push(nor1.x, nor1.y, nor1.z);
-//             normals.push(nor1.x, nor1.y, nor1.z);
-            
-            
-
-//             let vec34 = { x: x4-x3, y: y4-y3, z: z4-z3 };
-//             let vec24 = { x: x4-x2, y: y4-y2, z: z4-z2 };
-//             let nor2 = vec3_CrossProduct(vec34, vec24);
-//             vec3_Normalize(nor2);
-//             normals.push(nor2.x, nor2.y, nor2.z);
-//             normals.push(nor2.x, nor2.y, nor2.z);
-//             normals.push(nor2.x, nor2.y, nor2.z);
-
-            
-
-           
-            
-//         }
-        
-//     }
-
-
-//     return vertexList;
-
-// }
 
 
 
