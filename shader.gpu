@@ -5,16 +5,16 @@ attribute vec3 vertex;
 attribute vec3 normal;
 varying vec3 normalInterp;
 varying vec3 fragPos;
-uniform vec3 lightDir;
+varying vec3 lightDir;
 uniform mat4 ModelViewProjectionMatrix;
 uniform mat4 NormalMatrix;
-//uniform vec3 lightPos;
+uniform vec3 lightPos;
 
 void main() {
     gl_Position = ModelViewProjectionMatrix * vec4(vertex, 1.0);
     fragPos = vec3(ModelViewProjectionMatrix * vec4(vertex, 1.0));
     normalInterp = normalize(vec3(NormalMatrix * vec4(normal, 0.0)));
-    //lightDir = normalize(lightPos - fragPos);
+    lightDir = normalize(lightPos - fragPos);
 }
 `;
 
@@ -28,7 +28,7 @@ const fragmentShaderSource = `
 
 varying vec3 normalInterp;
 varying vec3 fragPos;
-uniform vec3 lightDir;
+varying vec3 lightDir;
 
 void main() {
     vec3 ambientColor = vec3(0.1, 0.1, 0.05);
@@ -51,14 +51,15 @@ void main() {
     vec3 lighting = ambientColor + (lambertian * diffuseColor) + (specular * specularColor);
     gl_FragColor = vec4(lighting, 1.0);
 
-    gl_FragColor = vec4(0.0, 0.0, 1.0, 1.0);
+    //gl_FragColor = vec4(0.0, 0.0, 1.0, 1.0);
+    //gl_FragColor = vec4(normal * 0.5 + 0.5, 1);
 }
 `;
 
 
-//////////////////
-/// LINE SHADER///
-//////////////////
+///////////////////
+/// LINE SHADER ///
+///////////////////
 
 // Vertex shader
 const LineVertexShaderSource = `

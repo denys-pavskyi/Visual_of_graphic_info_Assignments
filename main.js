@@ -49,6 +49,11 @@ function reDraw(){
     surface = new Model('Surface');
     surface.BufferData(CreateSurfaceData());
     surface.NormalBufferData(normals);
+
+    line = new Line("Line", lineProgram);
+    line.BufferData([0,0,0 ,lightX, lightY, lightZ]);
+
+
     draw();
 }
 
@@ -136,7 +141,7 @@ function Model(name) {
     this.Draw = function(projectionViewMatrix) {
 
         let rotation = spaceball.getViewMatrix();
-        let translation = m4.translation(0, 0 -10);
+        let translation = m4.translation(0, 0 ,0);
         let modelMatrix = m4.multiply(translation, rotation);
         let modelViewProjection = m4.multiply(projectionViewMatrix, modelMatrix);
 
@@ -147,14 +152,21 @@ function Model(name) {
         gl.enableVertexAttribArray(shProgram.iAttribVertex);
         
         gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
-       
-        
-        gl.uniform3fv(shProgram.iLightDirection, m4.scaleVector(m4.normalize([LightX, LightY, LightZ]), -1));
+        gl.uniform3fv(shProgram.lightPos, [lightX, lightY, lightZ]);
+        let lightDir = m4.scaleVector(m4.normalize([lightX, lightY, lightZ]), -1);
+        //gl.uniform3fv(shProgram.iLightDirection, lightDir);
         
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
         gl.vertexAttribPointer(shProgram.iAttribNormal, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribNormal);
 
+
+        let modelviewInv = new Float32Array(16);
+        let normalmatrix = new Float32Array(16);
+        mat4Invert(modelViewProjection, modelviewInv);
+        mat4Transpose(modelviewInv, normalmatrix);
+
+        gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, normalmatrix);
 
         gl.drawArrays(gl.TRIANGLES, 0, this.count);
     }
@@ -167,12 +179,14 @@ function ShaderProgram(name, program) {
     this.name = name;
     this.prog = program;
 
-    
+    this.iSolidColor = -1;
     this.iAttribVertex = -1;
     this.iModelViewProjectionMatrix = -1;
     this.iAttribNormal = -1;
     this.iNormalMatrix = -1;
+    //this.iLightDirection = -1;
 
+    this.lightPos = -1;
 
     this.Use = function() {
         gl.useProgram(this.prog);
@@ -214,33 +228,17 @@ function draw() {
     
     /* Set the values of the Perspective projection transformation */
     let projection = m4.perspective(Math.PI/8, 1, 8, 12); 
-    const viewMatrix = m4.lookAt(CameraPosition, [0, 0, 0], [0, 1, 0]);
+    let Camera = [0,0,-10];
+    const viewMatrix = m4.lookAt(Camera, [0, 0, 0], [0, 1, 0]);
     let rotateToPointZero = m4.axisRotation([0.707,0.707,0], 0.7);
-    const projectionViewMatrix = m4.multiply(projectionMatrix, m4.multiply(viewMatrix, rotateToPointZero));
+    const projectionViewMatrix = m4.multiply(projection, m4.multiply(viewMatrix, rotateToPointZero));
+
 
     
-    //let translateToPointZero = m4.translation(0,0,-10);
-
-    let matAccum0 = m4.multiply(rotateToPointZero, modelView );
-    let matAccum1 = m4.multiply(translateToPointZero, matAccum0 );
-        
-    /* Multiply the projection matrix times the modelview matrix to give the
-       combined transformation matrix, and send that to the shader program. */
-    let modelViewProjection = m4.multiply(projection, matAccum1 );
-
-    //gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection );
-    
-
-    let modelviewInv = new Float32Array(16);
-    let normalmatrix = new Float32Array(16);
-    mat4Invert(modelViewProjection, modelviewInv);
-    mat4Transpose(modelviewInv, normalmatrix);
-
-    gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, normalmatrix);
-
-    gl.uniform3fv(shProgram.lightPos, [lightX, lightY, lightZ]);
-    // CHANGE ON LIGHTDIR
-    surface.Draw();
+    lineProgram.Use();
+    line.Draw(projectionViewMatrix);
+    shProgram.Use()
+    surface.Draw(projectionViewMatrix);
 }
 
 
@@ -404,7 +402,8 @@ function initGL_Surface(){
     shProgram.iAttribVertex = gl.getAttribLocation(prog, "vertex");
     shProgram.iAttribNormal = gl.getAttribLocation(prog, "normal");
     shProgram.iNormalMatrix = gl.getUniformLocation(prog, "NormalMatrix");
-    shProgram.iLightDirection = gl.getUniformLocation(prog, "lightDir");
+    //shProgram.iLightDirection = gl.getUniformLocation(prog, "lightDir");
+    shProgram.lightPos = gl.getUniformLocation(prog, "lightPos");
 
     surface = new Model('Surface');
     surface.BufferData(CreateSurfaceData());
