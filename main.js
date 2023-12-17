@@ -4,6 +4,8 @@
 let gl;                         // The webgl context.
 let surface;                    // A surface model
 let shProgram;                  // A shader program
+let lineProgram;
+let line;
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
 
 
@@ -131,12 +133,23 @@ function Model(name) {
         this.count = normalsList.length / 3;
     }
 
-    this.Draw = function() {
+    this.Draw = function(projectionViewMatrix) {
+
+        let rotation = spaceball.getViewMatrix();
+        let translation = m4.translation(0, 0 -10);
+        let modelMatrix = m4.multiply(translation, rotation);
+        let modelViewProjection = m4.multiply(projectionViewMatrix, modelMatrix);
+
+
+
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribVertex);
         
-
+        gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
+       
+        
+        gl.uniform3fv(shProgram.iLightDirection, m4.scaleVector(m4.normalize([LightX, LightY, LightZ]), -1));
         
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
         gl.vertexAttribPointer(shProgram.iAttribNormal, 3, gl.FLOAT, false, 0, 0);
@@ -159,12 +172,39 @@ function ShaderProgram(name, program) {
     this.iModelViewProjectionMatrix = -1;
     this.iAttribNormal = -1;
     this.iNormalMatrix = -1;
-    this.lightPos = -1;
+
 
     this.Use = function() {
         gl.useProgram(this.prog);
     }
 }
+
+function Line(name, program){
+    this.position = m4.translation(0, 0, 0);
+    this.name = name;
+
+    this.iLightDirectionLineBuffer = gl.createBuffer();
+    this.program = program;
+
+    this.BufferData = function (data){
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iLightDirectionLineBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STREAM_DRAW)
+    }
+
+    this.Draw = function (projectionViewMatrix) {
+        this.program.Use();
+
+        gl.uniformMatrix4fv(this.program.iModelViewProjectionMatrix, false, m4.multiply(projectionViewMatrix, this.position));
+        gl.uniform4fv(this.program.iSolidColor, [0, 1, 0, 1]);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iLightDirectionLineBuffer);
+        gl.vertexAttribPointer(this.program.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(this.program.iAttribVertex);
+
+        gl.drawArrays(gl.LINE_STRIP, 0, 2);
+    }
+}
+
 
 
 // Draws a Surface of Revolution with Damping Circular Waves, along with a set of coordinate axes.
@@ -174,12 +214,12 @@ function draw() {
     
     /* Set the values of the Perspective projection transformation */
     let projection = m4.perspective(Math.PI/8, 1, 8, 12); 
-    
-    /* Get the view matrix from the SimpleRotator object.*/
-    let modelView = spaceball.getViewMatrix();
-
+    const viewMatrix = m4.lookAt(CameraPosition, [0, 0, 0], [0, 1, 0]);
     let rotateToPointZero = m4.axisRotation([0.707,0.707,0], 0.7);
-    let translateToPointZero = m4.translation(0,0,-10);
+    const projectionViewMatrix = m4.multiply(projectionMatrix, m4.multiply(viewMatrix, rotateToPointZero));
+
+    
+    //let translateToPointZero = m4.translation(0,0,-10);
 
     let matAccum0 = m4.multiply(rotateToPointZero, modelView );
     let matAccum1 = m4.multiply(translateToPointZero, matAccum0 );
@@ -188,7 +228,7 @@ function draw() {
        combined transformation matrix, and send that to the shader program. */
     let modelViewProjection = m4.multiply(projection, matAccum1 );
 
-    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection );
+    //gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection );
     
 
     let modelviewInv = new Float32Array(16);
@@ -199,6 +239,7 @@ function draw() {
     gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, normalmatrix);
 
     gl.uniform3fv(shProgram.lightPos, [lightX, lightY, lightZ]);
+    // CHANGE ON LIGHTDIR
     surface.Draw();
 }
 
@@ -330,22 +371,44 @@ function vec3_Normalize(vec) {
 
 /* Initialize the WebGL context. Called from init() */
 function initGL() {
+    
+    initGL_Surface();
+    initGL_Line();
+   
+
+
+    gl.enable(gl.DEPTH_TEST);
+}
+
+
+function initGL_Line(){
+    let prog = createProgram(gl, LineVertexShaderSource, LineFragmentShaderSource);
+
+    lineProgram = new ShaderProgram('Line', prog);
+    lineProgram.Use();
+
+    lineProgram.iAttribVertex = gl.getAttribLocation(prog, "vertex");
+    lineProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
+    lineProgram.iSolidColor = gl.getUniformLocation(prog, "color");
+
+    line = new Line("Line", lineProgram);
+    line.BufferData([0,0,0 ,lightX, lightY, lightZ]);
+}
+
+function initGL_Surface(){
     let prog = createProgram( gl, vertexShaderSource, fragmentShaderSource );
     retrieveValuesFromInputs();
     shProgram = new ShaderProgram('Basic', prog);
     shProgram.Use();
-
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
     shProgram.iAttribVertex = gl.getAttribLocation(prog, "vertex");
     shProgram.iAttribNormal = gl.getAttribLocation(prog, "normal");
     shProgram.iNormalMatrix = gl.getUniformLocation(prog, "NormalMatrix");
-    shProgram.lightPos = gl.getUniformLocation(prog, "lightPos");
+    shProgram.iLightDirection = gl.getUniformLocation(prog, "lightDir");
+
     surface = new Model('Surface');
     surface.BufferData(CreateSurfaceData());
     surface.NormalBufferData(normals);
-
-
-    gl.enable(gl.DEPTH_TEST);
 }
 
 
