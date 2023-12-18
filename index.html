@@ -46,11 +46,11 @@
     <input type="range" id="phase" min="0" max="360" step="5" value="45">
     <span id="phase_value"></span><br><br><br>
 
-    <label>Light position:</label>
-    <input type="range" id="x_light" min="-1200" max="700" step="15" value="40">
-    <input type="range" id="y_light" min="-1200" max="700" step="15" value="340">
-    <input type="range" id="z_light" min="-1200" max="700" step="15" value="180">
-    <br>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
+    <label>Manual Light position:</label>
+    <input type="range" id="x_light" min="-1200" max="1800" step="15" value="40">
+    <input type="range" id="y_light" min="-1200" max="1800" step="15" value="340">
+    <input type="range" id="z_light" min="-1200" max="1800" step="15" value="180">
+    <br>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
     X = <span id="x_light_value"></span>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
     Y = <span id="y_light_value"></span>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
     Z = <span id="z_light_value"></span>
@@ -59,7 +59,7 @@
 
     <p id="message">Drag your mouse to rotate surface.<br>
     (On a touch screen, you can use your finger.)</p>
-
+    <button id="AnimationButton" style="height: 40px; width: 200px; font-weight:bold;">Start/Stop Animation</button><br><br>
 
     <div id="canvas-holder">
     <canvas width="600" height="600" id="webglcanvas" style="background-color:red"></canvas>

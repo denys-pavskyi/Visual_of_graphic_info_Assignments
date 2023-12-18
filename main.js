@@ -18,7 +18,75 @@ let fi = Math.PI / 4;
 let rMax = 1.5; // Maximum r value
 let lightX, lightY, lightZ;
 
+let animation = false;
+let animID;
+
+let currentAnimPoint = 0;
+let parabolaCoordinates = [];
+let animCenter = [0, 0, -5]
+let parabolaFrames = 100;
 let normals = [];
+
+let surfaceDiametr = 0;
+
+function AnimationToggle(){
+
+    animation = !animation;
+    if(!animation){
+        window.cancelAnimationFrame(animID)
+    }else{
+        StartAnimation();
+    }
+    
+}
+
+document.getElementById('AnimationButton').addEventListener('click', AnimationToggle);
+
+
+let deltaTime = 1;
+
+function StartAnimation(){
+    
+    if(animation){
+        
+        lightX = parabolaCoordinates[currentAnimPoint].x;
+        lightY = parabolaCoordinates[currentAnimPoint].y;
+        lightZ = parabolaCoordinates[currentAnimPoint].z;
+
+        line = new Line("Line", lineProgram);
+        line.BufferData([0,0,0 ,lightX, lightY, lightZ]);
+        draw();
+        currentAnimPoint+=deltaTime;
+
+        if(currentAnimPoint==0 || currentAnimPoint+deltaTime == parabolaCoordinates.length){
+            deltaTime*=-1;
+        }
+    
+        
+        setTimeout(() => {
+            animID = window.requestAnimationFrame(StartAnimation);    
+        }, 1000/parabolaFrames + 7);
+
+    }else{
+        return;
+    }
+
+}
+
+function generate3DParabolaCoordinates(numPoints, center, width) {
+    const coordinates = [];
+
+    let step = width/numPoints;
+
+    let curr = -width/2;
+
+    while(curr<=width/2){
+        coordinates.push({ x: curr+center[0], y: Math.pow(curr, 2)+center[1], z: center[2] });
+        curr+=step;
+    }
+
+    return coordinates;
+}
 
 function deg2rad(angle) {
     return angle * Math.PI / 180;
@@ -153,8 +221,7 @@ function Model(name) {
         
         gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
         gl.uniform3fv(shProgram.lightPos, [lightX, lightY, lightZ]);
-        let lightDir = m4.scaleVector(m4.normalize([lightX, lightY, lightZ]), -1);
-        //gl.uniform3fv(shProgram.iLightDirection, lightDir);
+        
         
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
         gl.vertexAttribPointer(shProgram.iAttribNormal, 3, gl.FLOAT, false, 0, 0);
@@ -184,7 +251,6 @@ function ShaderProgram(name, program) {
     this.iModelViewProjectionMatrix = -1;
     this.iAttribNormal = -1;
     this.iNormalMatrix = -1;
-    //this.iLightDirection = -1;
 
     this.lightPos = -1;
 
@@ -251,7 +317,8 @@ function CreateSurfaceData()
     const vertexList = [];
     normals = [];
     let all_nor = [];
-
+    let x_min = 0;
+    let x_max = 0;   
 
     for (let i = 0; i < numPointsU; i++) {
 
@@ -283,6 +350,8 @@ function CreateSurfaceData()
             vertexList.push(x1, y1, z1, x3, y3, z3, x2, y2, z2);
             vertexList.push(x2, y2, z2, x3, y3, z3, x4, y4, z4);
 
+            x_min = Math.min(x_min, x1, x2, x3, x4);
+            x_max = Math.max(x_max, x1, x2, x3, x4);
             
             //normals
             let vec21 = { x: x2-x1, y: y2-y1, z: z2-z1 };
@@ -304,6 +373,8 @@ function CreateSurfaceData()
         all_nor.push(normals_row);
         
     }
+
+    surfaceDiametr = x_max - x_min;
 
 
     for(let i = 0; i<all_nor.length;i++){
@@ -346,6 +417,7 @@ function CreateSurfaceData()
         }
     }
 
+
     return vertexList;
 
 }
@@ -367,17 +439,24 @@ function vec3_Normalize(vec) {
 }
 
 
+
+
+
+
 /* Initialize the WebGL context. Called from init() */
 function initGL() {
     
     initGL_Surface();
     initGL_Line();
-   
+    initAnimationParabola();
 
 
     gl.enable(gl.DEPTH_TEST);
 }
 
+function initAnimationParabola(){
+    parabolaCoordinates = generate3DParabolaCoordinates(parabolaFrames, animCenter, surfaceDiametr);
+}
 
 function initGL_Line(){
     let prog = createProgram(gl, LineVertexShaderSource, LineFragmentShaderSource);
@@ -402,7 +481,6 @@ function initGL_Surface(){
     shProgram.iAttribVertex = gl.getAttribLocation(prog, "vertex");
     shProgram.iAttribNormal = gl.getAttribLocation(prog, "normal");
     shProgram.iNormalMatrix = gl.getUniformLocation(prog, "NormalMatrix");
-    //shProgram.iLightDirection = gl.getUniformLocation(prog, "lightDir");
     shProgram.lightPos = gl.getUniformLocation(prog, "lightPos");
 
     surface = new Model('Surface');
