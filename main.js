@@ -5,7 +5,7 @@ let gl;                         // The webgl context.
 let surface;                    // A surface model
 let shProgram;                  // A shader program
 let lineProgram;
-let line;
+let sphere;
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
 
 
@@ -26,11 +26,16 @@ let parabolaCoordinates = [];
 let animCenter = [0, 0, -5]
 let parabolaFrames = 100;
 let normals = [];
+let rotate_texture_value = 0;
+let point_on_surface = {u: 0.5, v: 0.5};
+let u_max = 0, v_max = 0, u_min = 0, v_min = 0, u_step = 0.1, v_step = 0.1;
 
-let surfaceDiametr = 0;
+
 
 function AnimationToggle(){
-
+    
+    //currentAnimPoint+= parabolaCoordinates.length-2;
+    
     animation = !animation;
     if(!animation){
         window.cancelAnimationFrame(animID)
@@ -49,13 +54,17 @@ function StartAnimation(){
     
     if(animation){
         
-        lightX = parabolaCoordinates[currentAnimPoint].x;
-        lightY = parabolaCoordinates[currentAnimPoint].y;
-        lightZ = parabolaCoordinates[currentAnimPoint].z;
+        //lightX = parabolaCoordinates[currentAnimPoint].x;
+        //lightY = parabolaCoordinates[currentAnimPoint].y;
+        //lightZ = parabolaCoordinates[currentAnimPoint].z;
 
-        line = new Line("Line", lineProgram);
-        line.BufferData([0,0,0 ,lightX, lightY, lightZ]);
-        draw();
+        let x = parabolaCoordinates[currentAnimPoint].x;
+        let y = parabolaCoordinates[currentAnimPoint].y;
+        let z = parabolaCoordinates[currentAnimPoint].z;
+
+        //line = new Line("Line", lineProgram);
+        //line.BufferData([x, y, z, 10, 10, 0]);
+        //draw();
         currentAnimPoint+=deltaTime;
 
         if(currentAnimPoint==0 || currentAnimPoint+deltaTime == parabolaCoordinates.length){
@@ -65,7 +74,7 @@ function StartAnimation(){
         
         setTimeout(() => {
             animID = window.requestAnimationFrame(StartAnimation);    
-        }, 1000/parabolaFrames + 7);
+        }, 70);//}, 1000/parabolaFrames + 70);
 
     }else{
         return;
@@ -110,7 +119,7 @@ function retrieveValuesFromInputs() {
     lightX = deg2rad(parseInt(document.getElementById('x_light').value));
     lightY = deg2rad(parseInt(document.getElementById('y_light').value));
     lightZ = deg2rad(parseInt(document.getElementById('z_light').value));
-    
+    rotate_texture_value = parseInt(document.getElementById('rotate_texture').value);
 }
 
 function reDraw(){
@@ -118,8 +127,8 @@ function reDraw(){
     surface.BufferData(CreateSurfaceData());
     surface.NormalBufferData(normals);
 
-    line = new Line("Line", lineProgram);
-    line.BufferData([0,0,0 ,lightX, lightY, lightZ]);
+    //line = new Line("Line", lineProgram);
+    //line.BufferData([0,0,0 ,lightX, lightY, lightZ]);
 
 
     draw();
@@ -171,6 +180,11 @@ document.getElementById('z_light').addEventListener('input', function() {
     retrieveValuesFromInputs();
     reDraw();
 });
+document.getElementById('rotate_texture').addEventListener('input', function() {
+    updateValue('rotate_texture');
+    retrieveValuesFromInputs();
+    reDraw();
+});
 
 //Initialize displayed values on page load
 updateValue('u_points');
@@ -182,6 +196,7 @@ updateValue('phase');
 updateValue('x_light');
 updateValue('y_light');
 updateValue('z_light');
+updateValue('rotate_texture');
 
 
 //Constructor
@@ -317,11 +332,13 @@ function CreateSurfaceData()
     const vertexList = [];
     normals = [];
     let all_nor = [];
-    let x_min = 0;
-    let x_max = 0;   
+    u_max = 0;
+    v_max = 0;   
+    u_min = 0;
+    v_min = 0;
+
 
     for (let i = 0; i < numPointsU; i++) {
-
         let normals_row = [];
 
         for (let j = 0; j < numPointsV; j++) {
@@ -346,12 +363,18 @@ function CreateSurfaceData()
             const x4 = v2 * Math.cos(u2);
             const y4 = v2 * Math.sin(u2);
             const z4 = damping_coef * Math.exp(-Math.PI * v2) * Math.sin((m * Math.PI * v2) / b + fi);
+
           
             vertexList.push(x1, y1, z1, x3, y3, z3, x2, y2, z2);
             vertexList.push(x2, y2, z2, x3, y3, z3, x4, y4, z4);
+  
 
-            x_min = Math.min(x_min, x1, x2, x3, x4);
-            x_max = Math.max(x_max, x1, x2, x3, x4);
+            u_max = Math.max(u_max, u1, u2);
+            v_max = Math.max(v_max, v1, v2);
+            u_min = Math.min(u_min, u1, u2);
+            v_min = Math.min(v_min, v1, v2);
+            u_step = 0.01*(u_max-u_min);
+            v_step = 0.01*(v_max-v_min);
             
             //normals
             let vec21 = { x: x2-x1, y: y2-y1, z: z2-z1 };
@@ -374,7 +397,7 @@ function CreateSurfaceData()
         
     }
 
-    surfaceDiametr = x_max - x_min;
+    
 
 
     for(let i = 0; i<all_nor.length;i++){
@@ -448,14 +471,14 @@ function initGL() {
     
     initGL_Surface();
     initGL_Line();
-    initAnimationParabola();
+    //initAnimationParabola();
 
 
     gl.enable(gl.DEPTH_TEST);
 }
 
 function initAnimationParabola(){
-    parabolaCoordinates = generate3DParabolaCoordinates(parabolaFrames, animCenter, surfaceDiametr);
+    //parabolaCoordinates = generate3DParabolaCoordinates(parabolaFrames, animCenter, surfaceDiametr);
 }
 
 function initGL_Line(){
@@ -551,6 +574,48 @@ export function init() {
     draw();
 }
 
+window.onkeydown = (e) => {
+    switch (e.keyCode) {
+        case 87:
+            point_on_surface.v -= v_step;
+            break;
+        case 83:
+            point_on_surface.v += v_step;
+            break;
+        case 65:
+            point_on_surface.u += u_step;
+            break;
+        case 68:
+            point_on_surface.u -= u_step;
+            break;
+    }
+
+    if(point_on_surface.u<u_min){
+        point_on_surface.u = u_max;
+    }else{
+        if(point_on_surface.u>u_max){
+            point_on_surface.u = u_min;
+        }
+    }
+
+    
+
+    //point_on_surface.u = Math.max(u_min, Math.min(point_on_surface.u, u_max))
+    point_on_surface.v = Math.max(v_min, Math.min(point_on_surface.v, v_max))
+
+    line = new Line("Line", lineProgram);
+    let pnt = calculatePointOnSurface(point_on_surface.u, point_on_surface.v);
+    line.BufferData([pnt.x, pnt.y, pnt.z , 10, 10, 0]);
+    draw();
+}
+
+function calculatePointOnSurface(u, v) {
+    const x = v * Math.cos(u);
+    const y = v * Math.sin(u);
+    const z = damping_coef * Math.exp(-Math.PI * v) * Math.sin((m * Math.PI * v) / b + fi);
+
+    return { x, y, z };
+}
 
 
 function mat4Transpose(a, transposed) {

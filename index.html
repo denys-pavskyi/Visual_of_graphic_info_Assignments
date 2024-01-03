@@ -59,7 +59,11 @@
 
     <p id="message">Drag your mouse to rotate surface.<br>
     (On a touch screen, you can use your finger.)</p>
-    <button id="AnimationButton" style="height: 40px; width: 200px; font-weight:bold;">Start/Stop Animation</button><br><br>
+    <button id="AnimationButton" style="height: 40px; width: 200px; font-weight:bold;">Start/Stop texture rotation Animation</button>
+    <label style="margin-left: 100px;">Rotate texture:</label>
+    <input type="range" id="rotate_texture" min="-100" max="100" step="2" value="0">
+    <span id="rotate_texture_value"></span>
+    <br><br>
 
     <div id="canvas-holder">
     <canvas width="600" height="600" id="webglcanvas" style="background-color:red"></canvas>
