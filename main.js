@@ -4,10 +4,10 @@
 let gl;                         // The webgl context.
 let surface;                    // A surface model
 let shProgram;                  // A shader program
-let lineProgram;
+let sphereProgram;
 let sphere;
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
-
+let texturePoint;
 
 let numPointsU = 125; // Number of points in the u direction
 let numPointsV = 125; // Number of points in the v direction
@@ -127,8 +127,9 @@ function reDraw(){
     surface.BufferData(CreateSurfaceData());
     surface.NormalBufferData(normals);
 
-    //line = new Line("Line", lineProgram);
-    //line.BufferData([0,0,0 ,lightX, lightY, lightZ]);
+    sphere = new Sphere("Sphere", sphereProgram);
+    let pnt = calculatePointOnSurface(point_on_surface.u, point_on_surface.v);
+    sphere.BufferData(CreateSphereSurface(pnt.x, pnt.y, pnt.z, 0.1));
 
 
     draw();
@@ -274,29 +275,36 @@ function ShaderProgram(name, program) {
     }
 }
 
-function Line(name, program){
-    this.position = m4.translation(0, 0, 0);
+function Sphere(name, program){
+    this.iVertexBuffer = gl.createBuffer();
     this.name = name;
+    this.count = 0;
 
-    this.iLightDirectionLineBuffer = gl.createBuffer();
     this.program = program;
 
-    this.BufferData = function (data){
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.iLightDirectionLineBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STREAM_DRAW)
+    this.BufferData = function(vertices) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STREAM_DRAW);
+        this.count = vertices.length / 3;
+
     }
 
     this.Draw = function (projectionViewMatrix) {
+
+        let rotation = spaceball.getViewMatrix();
+        let translation = m4.translation(0, 0 ,0);
+        let modelMatrix = m4.multiply(translation, rotation);
+        let modelViewProjection = m4.multiply(projectionViewMatrix, modelMatrix);
         this.program.Use();
 
-        gl.uniformMatrix4fv(this.program.iModelViewProjectionMatrix, false, m4.multiply(projectionViewMatrix, this.position));
-        gl.uniform4fv(this.program.iSolidColor, [0, 1, 0, 1]);
+        gl.uniformMatrix4fv(this.program.iModelViewProjectionMatrix, false, modelViewProjection);
+        gl.uniform4fv(this.program.iSolidColor, [0.7, 0.1, 0.2, 1]);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.iLightDirectionLineBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(this.program.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(this.program.iAttribVertex);
 
-        gl.drawArrays(gl.LINE_STRIP, 0, 2);
+        gl.drawArrays(gl.LINE_STRIP, 0, this.count);
     }
 }
 
@@ -316,8 +324,8 @@ function draw() {
 
 
     
-    lineProgram.Use();
-    line.Draw(projectionViewMatrix);
+    sphereProgram.Use();
+    sphere.Draw(projectionViewMatrix);
     shProgram.Use()
     surface.Draw(projectionViewMatrix);
 }
@@ -470,7 +478,7 @@ function vec3_Normalize(vec) {
 function initGL() {
     
     initGL_Surface();
-    initGL_Line();
+    initGL_Sphere();
     //initAnimationParabola();
 
 
@@ -481,18 +489,43 @@ function initAnimationParabola(){
     //parabolaCoordinates = generate3DParabolaCoordinates(parabolaFrames, animCenter, surfaceDiametr);
 }
 
-function initGL_Line(){
-    let prog = createProgram(gl, LineVertexShaderSource, LineFragmentShaderSource);
+function initGL_Sphere(){
+    let prog = createProgram(gl, SphereVertexShaderSource, SphereFragmentShaderSource);
 
-    lineProgram = new ShaderProgram('Line', prog);
-    lineProgram.Use();
+    sphereProgram = new ShaderProgram('Sphere', prog);
+    sphereProgram.Use();
 
-    lineProgram.iAttribVertex = gl.getAttribLocation(prog, "vertex");
-    lineProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
-    lineProgram.iSolidColor = gl.getUniformLocation(prog, "color");
+    sphereProgram.iAttribVertex = gl.getAttribLocation(prog, "vertex");
+    sphereProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
+    sphereProgram.iSolidColor = gl.getUniformLocation(prog, "color");
 
-    line = new Line("Line", lineProgram);
-    line.BufferData([0,0,0 ,lightX, lightY, lightZ]);
+    sphere = new Sphere("Sphere", sphereProgram);
+    let pnt = calculatePointOnSurface(point_on_surface.u, point_on_surface.v);
+    sphere.BufferData(CreateSphereSurface(pnt.x, pnt.y, pnt.z, 0.1));
+}
+
+function CreateSphereSurface(centerX, centerY, centerZ, r) {
+    let sphereVertexList = [];
+    let lon = -Math.PI;
+    let lat = -Math.PI * 0.5;
+    
+    while (lon < Math.PI) {
+        while (lat < Math.PI * 0.5) {
+            let v1 = sphereSurfaceData(centerX, centerY, centerZ, r, lon, lat);
+            sphereVertexList.push(v1.x, v1.y, v1.z);
+            lat += 0.05;
+        }
+        lat = -Math.PI * 0.5
+        lon += 0.05;
+    }
+    return sphereVertexList;
+}
+
+function sphereSurfaceData(centerX, centerY, centerZ, r, u, v) {
+    let x = centerX + r * Math.sin(u) * Math.cos(v);
+    let y = centerY + r * Math.sin(u) * Math.sin(v);
+    let z = centerZ + r * Math.cos(u);
+    return { x: x, y: y, z: z };
 }
 
 function initGL_Surface(){
@@ -603,9 +636,9 @@ window.onkeydown = (e) => {
     //point_on_surface.u = Math.max(u_min, Math.min(point_on_surface.u, u_max))
     point_on_surface.v = Math.max(v_min, Math.min(point_on_surface.v, v_max))
 
-    line = new Line("Line", lineProgram);
+    sphere = new Sphere("Sphere", sphereProgram);
     let pnt = calculatePointOnSurface(point_on_surface.u, point_on_surface.v);
-    line.BufferData([pnt.x, pnt.y, pnt.z , 10, 10, 0]);
+    sphere.BufferData(CreateSphereSurface(pnt.x, pnt.y, pnt.z, 0.1));
     draw();
 }
 
