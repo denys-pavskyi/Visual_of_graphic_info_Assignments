@@ -7,7 +7,8 @@ let shProgram;                  // A shader program
 let sphereProgram;
 let sphere;
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
-let texturePoint;
+
+let texturePoint = { x: 0.5, y: 0.5 };
 
 let numPointsU = 125; // Number of points in the u direction
 let numPointsV = 125; // Number of points in the v direction
@@ -16,86 +17,14 @@ let b = 1; // length of the straight line segment
 let m = 5; // number of half-waves
 let fi = Math.PI / 4;
 let rMax = 1.5; // Maximum r value
-let lightX, lightY, lightZ;
-
-let animation = false;
-let animID;
-
-let currentAnimPoint = 0;
-let parabolaCoordinates = [];
-let animCenter = [0, 0, -5]
-let parabolaFrames = 100;
 let normals = [];
-let rotate_texture_value = 0;
+
+
+let rotate_texture_value = 0.0;
 let point_on_surface = {u: 0.5, v: 0.5};
 let u_max = 0, v_max = 0, u_min = 0, v_min = 0, u_step = 0.1, v_step = 0.1;
 
 
-
-function AnimationToggle(){
-    
-    //currentAnimPoint+= parabolaCoordinates.length-2;
-    
-    animation = !animation;
-    if(!animation){
-        window.cancelAnimationFrame(animID)
-    }else{
-        StartAnimation();
-    }
-    
-}
-
-document.getElementById('AnimationButton').addEventListener('click', AnimationToggle);
-
-
-let deltaTime = 1;
-
-function StartAnimation(){
-    
-    if(animation){
-        
-        //lightX = parabolaCoordinates[currentAnimPoint].x;
-        //lightY = parabolaCoordinates[currentAnimPoint].y;
-        //lightZ = parabolaCoordinates[currentAnimPoint].z;
-
-        let x = parabolaCoordinates[currentAnimPoint].x;
-        let y = parabolaCoordinates[currentAnimPoint].y;
-        let z = parabolaCoordinates[currentAnimPoint].z;
-
-        //line = new Line("Line", lineProgram);
-        //line.BufferData([x, y, z, 10, 10, 0]);
-        //draw();
-        currentAnimPoint+=deltaTime;
-
-        if(currentAnimPoint==0 || currentAnimPoint+deltaTime == parabolaCoordinates.length){
-            deltaTime*=-1;
-        }
-    
-        
-        setTimeout(() => {
-            animID = window.requestAnimationFrame(StartAnimation);    
-        }, 70);//}, 1000/parabolaFrames + 70);
-
-    }else{
-        return;
-    }
-
-}
-
-function generate3DParabolaCoordinates(numPoints, center, width) {
-    const coordinates = [];
-
-    let step = width/numPoints;
-
-    let curr = -width/2;
-
-    while(curr<=width/2){
-        coordinates.push({ x: curr+center[0], y: Math.pow(curr, 2)+center[1], z: center[2] });
-        curr+=step;
-    }
-
-    return coordinates;
-}
 
 function deg2rad(angle) {
     return angle * Math.PI / 180;
@@ -115,17 +44,14 @@ function retrieveValuesFromInputs() {
     m = parseInt(document.getElementById('waves').value);
     fi = deg2rad(parseInt(document.getElementById('phase').value));
 
-
-    lightX = deg2rad(parseInt(document.getElementById('x_light').value));
-    lightY = deg2rad(parseInt(document.getElementById('y_light').value));
-    lightZ = deg2rad(parseInt(document.getElementById('z_light').value));
     rotate_texture_value = parseInt(document.getElementById('rotate_texture').value);
 }
 
 function reDraw(){
-    surface = new Model('Surface');
+    //surface = new Model('Surface');
     surface.BufferData(CreateSurfaceData());
-    surface.NormalBufferData(normals);
+    //LoadTexture();
+    //surface.TextureBufferData(CreateTexture());
 
     sphere = new Sphere("Sphere", sphereProgram);
     let pnt = calculatePointOnSurface(point_on_surface.u, point_on_surface.v);
@@ -166,21 +92,6 @@ document.getElementById('phase').addEventListener('input', function() {
     retrieveValuesFromInputs();
     reDraw();
 });
-document.getElementById('x_light').addEventListener('input', function() {
-    updateValue('x_light');
-    retrieveValuesFromInputs();
-    reDraw();
-});
-document.getElementById('y_light').addEventListener('input', function() {
-    updateValue('y_light');
-    retrieveValuesFromInputs();
-    reDraw();
-});
-document.getElementById('z_light').addEventListener('input', function() {
-    updateValue('z_light');
-    retrieveValuesFromInputs();
-    reDraw();
-});
 document.getElementById('rotate_texture').addEventListener('input', function() {
     updateValue('rotate_texture');
     retrieveValuesFromInputs();
@@ -194,9 +105,6 @@ updateValue('damping');
 updateValue('length');
 updateValue('waves');
 updateValue('phase');
-updateValue('x_light');
-updateValue('y_light');
-updateValue('z_light');
 updateValue('rotate_texture');
 
 
@@ -205,10 +113,11 @@ updateValue('rotate_texture');
 function Model(name) {
     this.name = name;
     this.iVertexBuffer = gl.createBuffer();
-    this.iNormalBuffer = gl.createBuffer();
     this.iTextureBuffer = gl.createBuffer();
+    this.texture = gl.createTexture();
+
+    this.countText = 0;
     this.count = 0;
-    this.textureCount = 0;
 
     this.BufferData = function(vertices) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
@@ -217,55 +126,39 @@ function Model(name) {
 
     }
 
-    this.TextureBufferData = function (normalsList) {
+    this.TextureBufferData = function (normals) {
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iTextureBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STREAM_DRAW);
 
-        this.textureCount = normalsList.length / 2;
+        this.countText = normals.length / 3;
     }
 
-    this.NormalBufferData = function (normalsList) {
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normalsList), gl.STREAM_DRAW);
-        this.count = normalsList.length / 3;
-    }
 
     this.Draw = function(projectionViewMatrix) {
 
         let rotation = spaceball.getViewMatrix();
-        let translation = m4.translation(0, 0 ,0);
+        let translation = m4.translation(0, 0, 0);
         let modelMatrix = m4.multiply(translation, rotation);
         let modelViewProjection = m4.multiply(projectionViewMatrix, modelMatrix);
-
-
+        gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
+        //
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribVertex);
         
-        gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
-        gl.uniform3fv(shProgram.lightPos, [lightX, lightY, lightZ]);
-        
-        
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
-        gl.vertexAttribPointer(shProgram.iAttribNormal, 3, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(shProgram.iAttribNormal);
-
-
-        let modelviewInv = new Float32Array(16);
-        let normalmatrix = new Float32Array(16);
-        mat4Invert(modelViewProjection, modelviewInv);
-        mat4Transpose(modelviewInv, normalmatrix);
-
-        gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, normalmatrix);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iTextureBuffer);
-        gl.vertexAttribPointer(shProgram.iAttribTexture, 2, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(shProgram.iAttribTexture);
+        gl.vertexAttribPointer(shProgram.aTexCoord, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shProgram.aTexCoord);
 
-        gl.drawArrays(gl.TRIANGLES, 0, this.count);
+        gl.uniform1i(shProgram.uTexture, 0);
+        gl.enable(gl.TEXTURE_2D);
+        gl.uniform2fv(shProgram.iTexturePoint, [texturePoint.x, texturePoint.y]);
+        gl.uniform1f(shProgram.iRotateValue, 0);
+
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, this.count);
     }
 }
 
@@ -278,18 +171,17 @@ function ShaderProgram(name, program) {
 
     this.iSolidColor = -1;
     this.iAttribVertex = -1;
-    this.iAttribTexture = -1;
-
     this.iModelViewProjectionMatrix = -1;
-    this.iAttribNormal = -1;
-    this.iNormalMatrix = -1;
 
-    this.iTranslatePoint = -1;
-    this.iTexturePoint = -1;
-    this.iRotateValue = -1;
-    this.iTMU = -1;
+    
+    this.uTextureRotation = -1; // Texture rotation uniform
+    // Get uniform locations
+    this.uTexture = -1;
+    this.uTextureRotation = -1;
 
-    this.lightPos = -1;
+    // Get attribute location for texture coordinates
+    this.aTexCoord = -1;
+    
 
     this.Use = function() {
         gl.useProgram(this.prog);
@@ -325,6 +217,8 @@ function Sphere(name, program){
         gl.vertexAttribPointer(this.program.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(this.program.iAttribVertex);
 
+
+
         gl.drawArrays(gl.LINE_STRIP, 0, this.count);
     }
 }
@@ -342,60 +236,17 @@ function draw() {
     const viewMatrix = m4.lookAt(Camera, [0, 0, 0], [0, 1, 0]);
     let rotateToPointZero = m4.axisRotation([0.707,0.707,0], 0.7);
     const projectionViewMatrix = m4.multiply(projection, m4.multiply(viewMatrix, rotateToPointZero));
+    
 
-    gl.uniform1i(shProgram.iTMU, 0);
-    gl.enable(gl.TEXTURE_2D);
-    gl.uniform2fv(shProgram.iTexturePoint, [texturePoint.x, texturePoint.y]);
-    gl.uniform1f(shProgram.iRotateValue, rotateValue);
-    gl.uniform3fv(shProgram.iTranslatePoint, [0, 0, 0]);
-    gl.uniform1f(shProgram.iRotateValue, 1100);
     
-    
-    shProgram.Use()
+    shProgram.Use();
     surface.Draw(projectionViewMatrix);
+
     sphereProgram.Use();
     sphere.Draw(projectionViewMatrix);
 }
 
-function CreateTexture() {
-    let texture = [];
 
-    let u = 0;
-    let v = 0;
-    let uMax = Math.PI * 2
-    let vMax = Math.PI * 2
-    let uStep = uMax / 50;
-    let vStep = vMax / 50;
-
-    for (let u = 0; u <= uMax; u += uStep) {
-        for (let v = 0; v <= vMax; v += vStep) {
-            let u1 = map(u, 0, uMax, 0, 1)
-            let v1 = map(v, 0, vMax, 0, 1)
-            texture.push(u1, v1)
-            u1 = map(u + uStep, 0, uMax, 0, 1)
-            texture.push(u1, v1)
-            u1 = map(u, 0, uMax, 0, 1)
-            v1 = map(v + vStep, 0, vMax, 0, 1)
-            texture.push(u1, v1)
-            u1 = map(u + uStep, 0, uMax, 0, 1)
-            v1 = map(v, 0, vMax, 0, 1)
-            texture.push(u1, v1)
-            v1 = map(v + vStep, 0, vMax, 0, 1)
-            texture.push(u1, v1)
-            u1 = map(u, 0, uMax, 0, 1)
-            v1 = map(v + vStep, 0, vMax, 0, 1)
-            texture.push(u1, v1)
-        }
-    }
-
-    return texture;
-}
-
-function map(val, f1, t1, f2, t2) {
-    let m;
-    m = (val - f1) * (t2 - f2) / (t1 - f1) + f2
-    return Math.min(Math.max(m, f2), t2);
-}
 
 // Normal Facet Average
 
@@ -512,14 +363,36 @@ function CreateSurfaceData()
 
         }
     }
-
-
+    
     return vertexList;
 
+    // let vertexList = [];
+
+    // let u = 0;
+    // let v = 0;
+    // let uMax = Math.PI * 2
+    // let vMax = Math.PI * 2
+    // let uStep = uMax / 50;
+    // let vStep = vMax / 50;
+
+    // for (let u = 0; u <= uMax; u += uStep) {
+    //     for (let v = 0; v <= vMax; v += vStep) {
+    //         let vert = KleinBottle(u, v)
+    //         let avert = KleinBottle(u + uStep, v)
+    //         let bvert = KleinBottle(u, v + vStep)
+    //         let cvert = KleinBottle(u + uStep, v + vStep)
+
+    //         vertexList.push(vert.x, vert.y, vert.z)
+    //         vertexList.push(avert.x, avert.y, avert.z)
+    //         vertexList.push(bvert.x, bvert.y, bvert.z)
+
+    //         vertexList.push(avert.x, avert.y, avert.z)
+    //         vertexList.push(cvert.x, cvert.y, cvert.z)
+    //         vertexList.push(bvert.x, bvert.y, bvert.z)
+    //     }
+    // }
+    //return vertexList;
 }
-
-
-
 
 
 function vec3_CrossProduct(a, b) {
@@ -534,18 +407,62 @@ function vec3_Normalize(vec) {
     vec[0] /= magnitude ; vec[1] /= magnitude ; vec[2] /= magnitude ;
 }
 
+function CreateTexture() {
+    let texture = [];
 
+    let u = 0;
+    let v = 0;
+    let uMax = Math.PI * 2
+    let vMax = Math.PI * 2
+    let uStep = uMax / 50;
+    let vStep = vMax / 50;
 
+    for (let u = 0; u <= uMax; u += uStep) {
+        for (let v = 0; v <= vMax; v += vStep) {
+            let u1 = map(u, 0, uMax, 0, 1)
+            let v1 = map(v, 0, vMax, 0, 1)
+            texture.push(u1, v1)
+            u1 = map(u + uStep, 0, uMax, 0, 1)
+            texture.push(u1, v1)
+            u1 = map(u, 0, uMax, 0, 1)
+            v1 = map(v + vStep, 0, vMax, 0, 1)
+            texture.push(u1, v1)
+            u1 = map(u + uStep, 0, uMax, 0, 1)
+            v1 = map(v, 0, vMax, 0, 1)
+            texture.push(u1, v1)
+            v1 = map(v + vStep, 0, vMax, 0, 1)
+            texture.push(u1, v1)
+            u1 = map(u, 0, uMax, 0, 1)
+            v1 = map(v + vStep, 0, vMax, 0, 1)
+            texture.push(u1, v1)
+        }
+    }
 
+    return texture;
+}
 
+function map(val, f1, t1, f2, t2) {
+    let m;
+    m = (val - f1) * (t2 - f2) / (t1 - f1) + f2
+    return Math.min(Math.max(m, f2), t2);
+}
+
+function KleinBottle(u, v) {
+    const multiplier = 0.33;
+    let a = 2.5
+    let uKoef = 1.5
+    let vKoef = 0.5
+    let x = (a + Math.cos(u * uKoef) * Math.sin(v) - Math.sin(u * uKoef) * Math.sin(vKoef * v)) * Math.cos(u)
+    let y = (a + Math.cos(u * uKoef) * Math.sin(v) - Math.sin(u * uKoef) * Math.sin(vKoef * v)) * Math.sin(u)
+    let z = (Math.sin(u * uKoef) * Math.sin(v) + Math.cos(u * uKoef) * Math.sin(vKoef * v));
+    return { x: x * multiplier, y: y * multiplier, z: z * multiplier }
+}
 
 /* Initialize the WebGL context. Called from init() */
 function initGL() {
     
     initGL_Surface();
     initGL_Sphere();
-    //initAnimationParabola();
-
 
     gl.enable(gl.DEPTH_TEST);
 }
@@ -593,21 +510,31 @@ function sphereSurfaceData(centerX, centerY, centerZ, r, u, v) {
     return { x: x, y: y, z: z };
 }
 
+
+
 function initGL_Surface(){
     let prog = createProgram( gl, vertexShaderSource, fragmentShaderSource );
     retrieveValuesFromInputs();
     shProgram = new ShaderProgram('Basic', prog);
     shProgram.Use();
-    shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
     shProgram.iAttribVertex = gl.getAttribLocation(prog, "vertex");
-    shProgram.iAttribNormal = gl.getAttribLocation(prog, "normal");
-    shProgram.iNormalMatrix = gl.getUniformLocation(prog, "NormalMatrix");
-    shProgram.lightPos = gl.getUniformLocation(prog, "lightPos");
+    shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
+    
+    shProgram.uTexture = gl.getUniformLocation(prog, "u_texture");
+    shProgram.uTextureRotation = gl.getUniformLocation(prog, "u_textureRotation");
+
+    // Get attribute location for texture coordinates
+    shProgram.aTexCoord = gl.getAttribLocation(prog, "a_texcoord");
 
     surface = new Model('Surface');
     surface.BufferData(CreateSurfaceData());
-    surface.NormalBufferData(normals);
+    //surface.TextureBufferData(normals);
+    //surface.TextureBufferData(temp_text_coords);
+    
+    LoadTexture();
+    surface.TextureBufferData(CreateSurfaceData());
 }
+
 
 
 /* Creates a program for use in the WebGL context gl, and returns the
@@ -715,6 +642,31 @@ function calculatePointOnSurface(u, v) {
     return { x, y, z };
 }
 
+function LoadTexture() {
+    let texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+
+    
+    image.src = "https://raw.githubusercontent.com/EssenceOfApple/WebGL/main/texture.jpg";
+
+    image.onload = () => {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.RGBA,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            image
+        );
+        draw()
+    }
+}
 
 function mat4Transpose(a, transposed) {
     var t = 0;
