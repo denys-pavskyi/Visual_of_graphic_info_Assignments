@@ -1,22 +1,132 @@
 
+// // Vertex shader
+// const vertexShaderSource = `
+// attribute vec3 vertex;
+// attribute vec3 normal;
+// varying vec3 normalInterp;
+// varying vec3 fragPos;
+// varying vec3 lightDir;
+// uniform mat4 ModelViewProjectionMatrix;
+// uniform mat4 NormalMatrix;
+// uniform vec3 lightPos;
+
+// void main() {
+//     gl_Position = ModelViewProjectionMatrix * vec4(vertex, 1.0);
+//     fragPos = vec3(ModelViewProjectionMatrix * vec4(vertex, 1.0));
+//     normalInterp = normalize(vec3(NormalMatrix * vec4(normal, 0.0)));
+//     lightDir = normalize(lightPos - fragPos);
+// }
+// `;
+
+// // Fragment shader
+// const fragmentShaderSource = `
+// #ifdef GL_FRAGMENT_PRECISION_HIGH
+//    precision highp float;
+// #else
+//    precision mediump float;
+// #endif
+
+// varying vec3 normalInterp;
+// varying vec3 fragPos;
+// varying vec3 lightDir;
+
+// void main() {
+//     vec3 ambientColor = vec3(0.1, 0.1, 0.05);
+//     vec3 diffuseColor = vec3(1.0, 1.0, 0.5);
+//     vec3 specularColor = vec3(0.0, 0.0, 0.0);
+
+//     vec3 normal = normalize(normalInterp);
+//     vec3 lightDirNorm = normalize(lightDir);
+//     vec3 viewDir = normalize(-fragPos);
+
+//     float lambertian = max(dot(normal, lightDirNorm), 0.0);
+//     float specular = 0.0;
+
+//     if (lambertian > 0.0) {
+//         vec3 reflectDir = reflect(-lightDirNorm, normal);
+//         float specAngle = max(dot(reflectDir, viewDir), 0.0);
+//         specular = pow(specAngle, 30.0); 
+//     }
+
+//     vec3 lighting = ambientColor + (lambertian * diffuseColor) + (specular * specularColor);
+//     gl_FragColor = vec4(lighting, 1.0);
+
+// }
+// `;
+
+
 // Vertex shader
 const vertexShaderSource = `
 attribute vec3 vertex;
-attribute vec3 normal;
-varying vec3 normalInterp;
-varying vec3 fragPos;
-varying vec3 lightDir;
+attribute vec2 texture;
+varying vec2 v_texcoord;
 uniform mat4 ModelViewProjectionMatrix;
-uniform mat4 NormalMatrix;
-uniform vec3 lightPos;
+uniform vec3 translatePoint;
+uniform vec2 texturePoint;
+uniform float rotateValue;
+
+mat4 translation(float tx, float ty, float tz) {
+    mat4 dst;
+
+    dst[0][0] = 1.0;
+    dst[0][ 1] = 0.0;
+    dst[0][ 2] = 0.0;
+    dst[0][ 3] = 0.0;
+    dst[1][ 0] = 0.0;
+    dst[1][ 1] = 1.0;
+    dst[1][ 2] = 0.0;
+    dst[1][ 3] = 0.0;
+    dst[2][ 0] = 0.0;
+    dst[2][ 1] = 0.0;
+    dst[2][ 2] = 1.0;
+    dst[2][ 3] = 0.0;
+    dst[3][ 0] = tx;
+    dst[3][ 1] = ty;
+    dst[3][ 2] = tz;
+    dst[3][ 3] = 1.0;
+    return dst;
+}
+
+mat4 rotation(float angleInRadians) {
+    mat4 dst;
+    float c = cos(angleInRadians);
+    float s = sin(angleInRadians);
+
+    dst[0][0] = c;
+    dst[0][ 1] = s;
+    dst[0][ 2] = 0.0;
+    dst[0][ 3] = 0.0;
+    dst[1][ 0] = -s;
+    dst[1][ 1] = c;
+    dst[1][ 2] = 0.0;
+    dst[1][ 3] = 0.0;
+    dst[2][ 0] = 0.0;
+    dst[2][ 1] = 0.0;
+    dst[2][ 2] = 1.0;
+    dst[2][ 3] = 0.0;
+    dst[3][ 0] = 0.0;
+    dst[3][ 1] = 0.0;
+    dst[3][ 2] = 0.0;
+    dst[3][ 3] = 1.0;
+
+    return dst;
+}
 
 void main() {
-    gl_Position = ModelViewProjectionMatrix * vec4(vertex, 1.0);
-    fragPos = vec3(ModelViewProjectionMatrix * vec4(vertex, 1.0));
-    normalInterp = normalize(vec3(NormalMatrix * vec4(normal, 0.0)));
-    lightDir = normalize(lightPos - fragPos);
-}
-`;
+    mat4 rMatrix = rotation(rotateValue);
+    mat4 t1Matrix = translation(texturePoint.x, texturePoint.y, 0.0);
+    mat4 t2Matrix = translation(-texturePoint.x, -texturePoint.y, 0.0);
+    vec4 texture1 = vec4(texture, 0.0, 0.0) * t1Matrix;
+    vec4 textureRotated = texture1 * rMatrix;
+    vec4 texture2 = textureRotated * t2Matrix;
+    v_texcoord = vec2(texture2.x, texture2.y);
+    vec4 vertPos4 = ModelViewProjectionMatrix * vec4(vertex, 1.0);
+    gl_Position = vertPos4;
+    if (rotateValue > 1000.0) {
+        vec4 tPoint = translation(translatePoint.x, translatePoint.y, translatePoint.z) * vec4(vertex, 1.0);
+        gl_Position = ModelViewProjectionMatrix * tPoint;
+    }
+}`;
 
 // Fragment shader
 const fragmentShaderSource = `
@@ -26,33 +136,20 @@ const fragmentShaderSource = `
    precision mediump float;
 #endif
 
-varying vec3 normalInterp;
-varying vec3 fragPos;
-varying vec3 lightDir;
+varying vec2 v_texcoord;
+uniform sampler2D tmu;
+uniform float rotateValue;
 
 void main() {
-    vec3 ambientColor = vec3(0.1, 0.1, 0.05);
-    vec3 diffuseColor = vec3(1.0, 1.0, 0.5);
-    vec3 specularColor = vec3(0.0, 0.0, 0.0);
-
-    vec3 normal = normalize(normalInterp);
-    vec3 lightDirNorm = normalize(lightDir);
-    vec3 viewDir = normalize(-fragPos);
-
-    float lambertian = max(dot(normal, lightDirNorm), 0.0);
-    float specular = 0.0;
-
-    if (lambertian > 0.0) {
-        vec3 reflectDir = reflect(-lightDirNorm, normal);
-        float specAngle = max(dot(reflectDir, viewDir), 0.0);
-        specular = pow(specAngle, 30.0); 
+    vec4 texColor = texture2D(tmu, v_texcoord);
+    gl_FragColor = texColor;
+    if (rotateValue > 1000.0) {
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0); // Transparent pixel if condition is met
     }
+}`;
 
-    vec3 lighting = ambientColor + (lambertian * diffuseColor) + (specular * specularColor);
-    gl_FragColor = vec4(lighting, 1.0);
 
-}
-`;
+
 
 
 /////////////////////

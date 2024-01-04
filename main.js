@@ -206,13 +206,23 @@ function Model(name) {
     this.name = name;
     this.iVertexBuffer = gl.createBuffer();
     this.iNormalBuffer = gl.createBuffer();
+    this.iTextureBuffer = gl.createBuffer();
     this.count = 0;
+    this.textureCount = 0;
 
     this.BufferData = function(vertices) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STREAM_DRAW);
         this.count = vertices.length / 3;
 
+    }
+
+    this.TextureBufferData = function (normalsList) {
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iTextureBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STREAM_DRAW);
+
+        this.textureCount = normalsList.length / 2;
     }
 
     this.NormalBufferData = function (normalsList) {
@@ -251,6 +261,10 @@ function Model(name) {
 
         gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, normalmatrix);
 
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iTextureBuffer);
+        gl.vertexAttribPointer(shProgram.iAttribTexture, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shProgram.iAttribTexture);
+
         gl.drawArrays(gl.TRIANGLES, 0, this.count);
     }
 }
@@ -264,9 +278,16 @@ function ShaderProgram(name, program) {
 
     this.iSolidColor = -1;
     this.iAttribVertex = -1;
+    this.iAttribTexture = -1;
+
     this.iModelViewProjectionMatrix = -1;
     this.iAttribNormal = -1;
     this.iNormalMatrix = -1;
+
+    this.iTranslatePoint = -1;
+    this.iTexturePoint = -1;
+    this.iRotateValue = -1;
+    this.iTMU = -1;
 
     this.lightPos = -1;
 
@@ -322,15 +343,59 @@ function draw() {
     let rotateToPointZero = m4.axisRotation([0.707,0.707,0], 0.7);
     const projectionViewMatrix = m4.multiply(projection, m4.multiply(viewMatrix, rotateToPointZero));
 
-
+    gl.uniform1i(shProgram.iTMU, 0);
+    gl.enable(gl.TEXTURE_2D);
+    gl.uniform2fv(shProgram.iTexturePoint, [texturePoint.x, texturePoint.y]);
+    gl.uniform1f(shProgram.iRotateValue, rotateValue);
+    gl.uniform3fv(shProgram.iTranslatePoint, [0, 0, 0]);
+    gl.uniform1f(shProgram.iRotateValue, 1100);
     
-    sphereProgram.Use();
-    sphere.Draw(projectionViewMatrix);
+    
     shProgram.Use()
     surface.Draw(projectionViewMatrix);
+    sphereProgram.Use();
+    sphere.Draw(projectionViewMatrix);
 }
 
+function CreateTexture() {
+    let texture = [];
 
+    let u = 0;
+    let v = 0;
+    let uMax = Math.PI * 2
+    let vMax = Math.PI * 2
+    let uStep = uMax / 50;
+    let vStep = vMax / 50;
+
+    for (let u = 0; u <= uMax; u += uStep) {
+        for (let v = 0; v <= vMax; v += vStep) {
+            let u1 = map(u, 0, uMax, 0, 1)
+            let v1 = map(v, 0, vMax, 0, 1)
+            texture.push(u1, v1)
+            u1 = map(u + uStep, 0, uMax, 0, 1)
+            texture.push(u1, v1)
+            u1 = map(u, 0, uMax, 0, 1)
+            v1 = map(v + vStep, 0, vMax, 0, 1)
+            texture.push(u1, v1)
+            u1 = map(u + uStep, 0, uMax, 0, 1)
+            v1 = map(v, 0, vMax, 0, 1)
+            texture.push(u1, v1)
+            v1 = map(v + vStep, 0, vMax, 0, 1)
+            texture.push(u1, v1)
+            u1 = map(u, 0, uMax, 0, 1)
+            v1 = map(v + vStep, 0, vMax, 0, 1)
+            texture.push(u1, v1)
+        }
+    }
+
+    return texture;
+}
+
+function map(val, f1, t1, f2, t2) {
+    let m;
+    m = (val - f1) * (t2 - f2) / (t1 - f1) + f2
+    return Math.min(Math.max(m, f2), t2);
+}
 
 // Normal Facet Average
 
