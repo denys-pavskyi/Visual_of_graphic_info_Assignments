@@ -94,8 +94,6 @@ document.getElementById('phase').addEventListener('input', function() {
 });
 document.getElementById('rotate_texture').addEventListener('input', function() {
     updateValue('rotate_texture');
-    //retrieveValuesFromInputs();
-    //reDraw();
     rotate_surface();
 });
 
@@ -181,8 +179,9 @@ function ShaderProgram(name, program) {
     this.iAttribVertex = -1;
     this.iModelViewProjectionMatrix = -1;
 
+    // Texture rotation uniform
+    this.uTextureRotation = -1; 
     
-    this.uTextureRotation = -1; // Texture rotation uniform
     // Get uniform locations
     this.uTexture = -1;
 
@@ -373,33 +372,6 @@ function CreateSurfaceData()
     }
     
     return vertexList;
-
-    // let vertexList = [];
-
-    // let u = 0;
-    // let v = 0;
-    // let uMax = Math.PI * 2
-    // let vMax = Math.PI * 2
-    // let uStep = uMax / 50;
-    // let vStep = vMax / 50;
-
-    // for (let u = 0; u <= uMax; u += uStep) {
-    //     for (let v = 0; v <= vMax; v += vStep) {
-    //         let vert = KleinBottle(u, v)
-    //         let avert = KleinBottle(u + uStep, v)
-    //         let bvert = KleinBottle(u, v + vStep)
-    //         let cvert = KleinBottle(u + uStep, v + vStep)
-
-    //         vertexList.push(vert.x, vert.y, vert.z)
-    //         vertexList.push(avert.x, avert.y, avert.z)
-    //         vertexList.push(bvert.x, bvert.y, bvert.z)
-
-    //         vertexList.push(avert.x, avert.y, avert.z)
-    //         vertexList.push(cvert.x, cvert.y, cvert.z)
-    //         vertexList.push(bvert.x, bvert.y, bvert.z)
-    //     }
-    // }
-    //return vertexList;
 }
 
 
@@ -437,56 +409,7 @@ function vec3_Normalize(vec) {
     vec[0] /= magnitude ; vec[1] /= magnitude ; vec[2] /= magnitude ;
 }
 
-function CreateTexture() {
-    let texture = [];
 
-    let u = 0;
-    let v = 0;
-    let uMax = Math.PI * 2
-    let vMax = Math.PI * 2
-    let uStep = uMax / 50;
-    let vStep = vMax / 50;
-
-    for (let u = 0; u <= uMax; u += uStep) {
-        for (let v = 0; v <= vMax; v += vStep) {
-            let u1 = map(u, 0, uMax, 0, 1)
-            let v1 = map(v, 0, vMax, 0, 1)
-            texture.push(u1, v1)
-            u1 = map(u + uStep, 0, uMax, 0, 1)
-            texture.push(u1, v1)
-            u1 = map(u, 0, uMax, 0, 1)
-            v1 = map(v + vStep, 0, vMax, 0, 1)
-            texture.push(u1, v1)
-            u1 = map(u + uStep, 0, uMax, 0, 1)
-            v1 = map(v, 0, vMax, 0, 1)
-            texture.push(u1, v1)
-            v1 = map(v + vStep, 0, vMax, 0, 1)
-            texture.push(u1, v1)
-            u1 = map(u, 0, uMax, 0, 1)
-            v1 = map(v + vStep, 0, vMax, 0, 1)
-            texture.push(u1, v1)
-        }
-    }
-
-    return texture;
-}
-
-function map(val, f1, t1, f2, t2) {
-    let m;
-    m = (val - f1) * (t2 - f2) / (t1 - f1) + f2
-    return Math.min(Math.max(m, f2), t2);
-}
-
-function KleinBottle(u, v) {
-    const multiplier = 0.33;
-    let a = 2.5
-    let uKoef = 1.5
-    let vKoef = 0.5
-    let x = (a + Math.cos(u * uKoef) * Math.sin(v) - Math.sin(u * uKoef) * Math.sin(vKoef * v)) * Math.cos(u)
-    let y = (a + Math.cos(u * uKoef) * Math.sin(v) - Math.sin(u * uKoef) * Math.sin(vKoef * v)) * Math.sin(u)
-    let z = (Math.sin(u * uKoef) * Math.sin(v) + Math.cos(u * uKoef) * Math.sin(vKoef * v));
-    return { x: x * multiplier, y: y * multiplier, z: z * multiplier }
-}
 
 /* Initialize the WebGL context. Called from init() */
 function initGL() {
@@ -496,9 +419,6 @@ function initGL() {
     gl.enable(gl.DEPTH_TEST);
 }
 
-function initAnimationParabola(){
-    //parabolaCoordinates = generate3DParabolaCoordinates(parabolaFrames, animCenter, surfaceDiametr);
-}
 
 function initGL_Sphere(){
     let prog = createProgram(gl, SphereVertexShaderSource, SphereFragmentShaderSource);
@@ -650,9 +570,6 @@ window.onkeydown = (e) => {
         }
     }
 
-    
-
-    //point_on_surface.u = Math.max(u_min, Math.min(point_on_surface.u, u_max))
     point_on_surface.v = Math.max(v_min, Math.min(point_on_surface.v, v_max))
 
     sphere = new Sphere("Sphere", sphereProgram);
@@ -678,8 +595,8 @@ function LoadTexture() {
     const image = new Image();
     image.crossOrigin = 'anonymous';
 
+    image.src = "https://raw.githubusercontent.com/denys-pavskyi/Visual_of_graphic_info_Assignments/CGW/texture.jpg";
     
-    image.src = "https://i.ibb.co/tJG9nLv/d9fr60u-2bb6b25e-85a1-47d0-a5cb-746439814ba5-1.jpg";
 
     image.onload = () => {
         gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -693,55 +610,4 @@ function LoadTexture() {
         );
         draw();
     }
-}
-
-function mat4Transpose(a, transposed) {
-    var t = 0;
-    for (var i = 0; i < 4; ++i) {
-        for (var j = 0; j < 4; ++j) {
-            transposed[t++] = a[j * 4 + i];
-        }
-    }
-}
-
-function mat4Invert(m, inverse) {
-    var inv = new Float32Array(16);
-    inv[0] = m[5] * m[10] * m[15] - m[5] * m[11] * m[14] - m[9] * m[6] * m[15] +
-        m[9] * m[7] * m[14] + m[13] * m[6] * m[11] - m[13] * m[7] * m[10];
-    inv[4] = -m[4] * m[10] * m[15] + m[4] * m[11] * m[14] + m[8] * m[6] * m[15] -
-        m[8] * m[7] * m[14] - m[12] * m[6] * m[11] + m[12] * m[7] * m[10];
-    inv[8] = m[4] * m[9] * m[15] - m[4] * m[11] * m[13] - m[8] * m[5] * m[15] +
-        m[8] * m[7] * m[13] + m[12] * m[5] * m[11] - m[12] * m[7] * m[9];
-    inv[12] = -m[4] * m[9] * m[14] + m[4] * m[10] * m[13] + m[8] * m[5] * m[14] -
-        m[8] * m[6] * m[13] - m[12] * m[5] * m[10] + m[12] * m[6] * m[9];
-    inv[1] = -m[1] * m[10] * m[15] + m[1] * m[11] * m[14] + m[9] * m[2] * m[15] -
-        m[9] * m[3] * m[14] - m[13] * m[2] * m[11] + m[13] * m[3] * m[10];
-    inv[5] = m[0] * m[10] * m[15] - m[0] * m[11] * m[14] - m[8] * m[2] * m[15] +
-        m[8] * m[3] * m[14] + m[12] * m[2] * m[11] - m[12] * m[3] * m[10];
-    inv[9] = -m[0] * m[9] * m[15] + m[0] * m[11] * m[13] + m[8] * m[1] * m[15] -
-        m[8] * m[3] * m[13] - m[12] * m[1] * m[11] + m[12] * m[3] * m[9];
-    inv[13] = m[0] * m[9] * m[14] - m[0] * m[10] * m[13] - m[8] * m[1] * m[14] +
-        m[8] * m[2] * m[13] + m[12] * m[1] * m[10] - m[12] * m[2] * m[9];
-    inv[2] = m[1] * m[6] * m[15] - m[1] * m[7] * m[14] - m[5] * m[2] * m[15] +
-        m[5] * m[3] * m[14] + m[13] * m[2] * m[7] - m[13] * m[3] * m[6];
-    inv[6] = -m[0] * m[6] * m[15] + m[0] * m[7] * m[14] + m[4] * m[2] * m[15] -
-        m[4] * m[3] * m[14] - m[12] * m[2] * m[7] + m[12] * m[3] * m[6];
-    inv[10] = m[0] * m[5] * m[15] - m[0] * m[7] * m[13] - m[4] * m[1] * m[15] +
-        m[4] * m[3] * m[13] + m[12] * m[1] * m[7] - m[12] * m[3] * m[5];
-    inv[14] = -m[0] * m[5] * m[14] + m[0] * m[6] * m[13] + m[4] * m[1] * m[14] -
-        m[4] * m[2] * m[13] - m[12] * m[1] * m[6] + m[12] * m[2] * m[5];
-    inv[3] = -m[1] * m[6] * m[11] + m[1] * m[7] * m[10] + m[5] * m[2] * m[11] -
-        m[5] * m[3] * m[10] - m[9] * m[2] * m[7] + m[9] * m[3] * m[6];
-    inv[7] = m[0] * m[6] * m[11] - m[0] * m[7] * m[10] - m[4] * m[2] * m[11] +
-        m[4] * m[3] * m[10] + m[8] * m[2] * m[7] - m[8] * m[3] * m[6];
-    inv[11] = -m[0] * m[5] * m[11] + m[0] * m[7] * m[9] + m[4] * m[1] * m[11] -
-        m[4] * m[3] * m[9] - m[8] * m[1] * m[7] + m[8] * m[3] * m[5];
-    inv[15] = m[0] * m[5] * m[10] - m[0] * m[6] * m[9] - m[4] * m[1] * m[10] +
-        m[4] * m[2] * m[9] + m[8] * m[1] * m[6] - m[8] * m[2] * m[5];
-
-    var det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
-    if (det == 0) return false;
-    det = 1.0 / det;
-    for (var i = 0; i < 16; i++) inverse[i] = inv[i] * det;
-    return true;
 }
