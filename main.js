@@ -8,7 +8,6 @@ let sphereProgram;
 let sphere;
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
 
-let texturePoint = { x: 0.5, y: 0.5 };
 
 let numPointsU = 125; // Number of points in the u direction
 let numPointsV = 125; // Number of points in the v direction
@@ -147,7 +146,6 @@ function Model(name) {
         let modelMatrix = m4.multiply(translation, rotation);
         let modelViewProjection = m4.multiply(projectionViewMatrix, modelMatrix);
         gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
-        //
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
@@ -161,7 +159,6 @@ function Model(name) {
         gl.uniform1i(shProgram.uTexture, 0);
         gl.uniform1f(shProgram.uTextureRotation, rotate_texture_value);
         gl.enable(gl.TEXTURE_2D);
-        gl.uniform2fv(shProgram.iTexturePoint, [texturePoint.x, texturePoint.y]);
         gl.uniform1f(shProgram.iRotateValue, 0);
 
         gl.drawArrays(gl.TRIANGLES, 0, this.count);
@@ -549,15 +546,19 @@ export function init() {
 window.onkeydown = (e) => {
     switch (e.keyCode) {
         case 87:
+            // W key
             point_on_surface.v -= v_step;
             break;
         case 83:
+            // S key
             point_on_surface.v += v_step;
             break;
         case 65:
+            // A key
             point_on_surface.u += u_step;
             break;
         case 68:
+            // D key
             point_on_surface.u -= u_step;
             break;
     }
