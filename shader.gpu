@@ -85,9 +85,15 @@ void main() {
         (v_texCoord.x - 0.5) * sin(u_textureRotation) + (v_texCoord.y - 0.5) * cos(u_textureRotation) + 0.5
     );
 
+    // float tmo_rot = 0.5;
+    // vec2 rotatedTexCoord = vec2(
+    //     (v_texCoord.x - 0.5) * cos(tmo_rot) - (v_texCoord.y - 0.5) * sin(tmo_rot) + 0.5,
+    //     (v_texCoord.x - 0.5) * sin(tmo_rot) + (v_texCoord.y - 0.5) * cos(tmo_rot) + 0.5
+    // );
+
     // Fetch texel from the texture
-    //vec4 texColor = texture2D(u_texture, rotatedTexCoord);
-    vec4 texColor = texture2D(u_texture, v_texCoord);
+    vec4 texColor = texture2D(u_texture, rotatedTexCoord);
+    //vec4 texColor = texture2D(u_texture, v_texCoord);
 
     // Output the color from the texture
     gl_FragColor = texColor;
@@ -95,6 +101,13 @@ void main() {
     //float res = 1.0/v_texCoord[1];
 
     //gl_FragColor = vec4(0.5,0.5,0,1);
+    // gl_FragColor = vec4(u_textureRotation/100.0,0.5,0,1);
+    // if(u_textureRotation==0.0){
+    //     //gl_FragColor = vec4(u_textureRotation/10.0,0.5,0,1);
+    // }
+    // if(u_textureRotation==100.0){
+    //     gl_FragColor = vec4(0.0,0,1,1);
+    // }
 }`;
 
 

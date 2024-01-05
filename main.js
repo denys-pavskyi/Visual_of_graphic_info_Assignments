@@ -44,14 +44,14 @@ function retrieveValuesFromInputs() {
     m = parseInt(document.getElementById('waves').value);
     fi = deg2rad(parseInt(document.getElementById('phase').value));
 
-    rotate_texture_value = parseInt(document.getElementById('rotate_texture').value);
+    rotate_texture_value = parseFloat(document.getElementById('rotate_texture').value);
 }
 
 function reDraw(){
     //surface = new Model('Surface');
     surface.BufferData(CreateSurfaceData());
     //LoadTexture();
-    //surface.TextureBufferData(CreateTexture());
+    surface.TextureBufferData(CreateTextureCoordinates(numPointsU,numPointsV));
 
     sphere = new Sphere("Sphere", sphereProgram);
     let pnt = calculatePointOnSurface(point_on_surface.u, point_on_surface.v);
@@ -94,9 +94,16 @@ document.getElementById('phase').addEventListener('input', function() {
 });
 document.getElementById('rotate_texture').addEventListener('input', function() {
     updateValue('rotate_texture');
-    retrieveValuesFromInputs();
-    reDraw();
+    //retrieveValuesFromInputs();
+    //reDraw();
+    rotate_surface();
 });
+
+function rotate_surface(){
+    rotate_texture_value = parseFloat(document.getElementById('rotate_texture').value);
+
+    draw();
+}
 
 //Initialize displayed values on page load
 updateValue('u_points');
@@ -154,11 +161,12 @@ function Model(name) {
         gl.enableVertexAttribArray(shProgram.aTexCoord);
 
         gl.uniform1i(shProgram.uTexture, 0);
+        gl.uniform1f(shProgram.uTextureRotation, rotate_texture_value);
         gl.enable(gl.TEXTURE_2D);
         gl.uniform2fv(shProgram.iTexturePoint, [texturePoint.x, texturePoint.y]);
         gl.uniform1f(shProgram.iRotateValue, 0);
 
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, this.count);
+        gl.drawArrays(gl.TRIANGLES, 0, this.count);
     }
 }
 
@@ -177,7 +185,7 @@ function ShaderProgram(name, program) {
     this.uTextureRotation = -1; // Texture rotation uniform
     // Get uniform locations
     this.uTexture = -1;
-    this.uTextureRotation = -1;
+
 
     // Get attribute location for texture coordinates
     this.aTexCoord = -1;
@@ -395,6 +403,28 @@ function CreateSurfaceData()
 }
 
 
+function CreateTextureCoordinates(numPointsU, numPointsV) {
+    const textureCoords = [];
+
+    for (let i = 0; i < numPointsU; i++) {
+        for (let j = 0; j < numPointsV; j++) {
+            const u1 = i / (numPointsU - 1); // U coordinate
+            const v1 = j / (numPointsV - 1); // V coordinate
+
+            // Push texture coordinates for the current quad
+            textureCoords.push(u1, v1);
+            textureCoords.push(u1 + 1 / numPointsU, v1);
+            textureCoords.push(u1, v1 + 1 / numPointsV);
+
+            textureCoords.push(u1 + 1 / numPointsU, v1);
+            textureCoords.push(u1, v1 + 1 / numPointsV);
+            textureCoords.push(u1 + 1 / numPointsU, v1 + 1 / numPointsV);
+        }
+    }
+
+    return textureCoords;
+}
+
 function vec3_CrossProduct(a, b) {
     let x = a.y * b.z - b.y * a.z;
     let y = a.z * b.x - b.z * a.x;
@@ -463,7 +493,6 @@ function initGL() {
     
     initGL_Surface();
     initGL_Sphere();
-
     gl.enable(gl.DEPTH_TEST);
 }
 
@@ -528,11 +557,9 @@ function initGL_Surface(){
 
     surface = new Model('Surface');
     surface.BufferData(CreateSurfaceData());
-    //surface.TextureBufferData(normals);
-    //surface.TextureBufferData(temp_text_coords);
-    
     LoadTexture();
-    surface.TextureBufferData(CreateSurfaceData());
+    surface.TextureBufferData(CreateTextureCoordinates(numPointsU,numPointsV));
+    
 }
 
 
@@ -652,7 +679,7 @@ function LoadTexture() {
     image.crossOrigin = 'anonymous';
 
     
-    image.src = "https://raw.githubusercontent.com/EssenceOfApple/WebGL/main/texture.jpg";
+    image.src = "https://i.ibb.co/tJG9nLv/d9fr60u-2bb6b25e-85a1-47d0-a5cb-746439814ba5-1.jpg";
 
     image.onload = () => {
         gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -664,7 +691,7 @@ function LoadTexture() {
             gl.UNSIGNED_BYTE,
             image
         );
-        draw()
+        draw();
     }
 }
 
