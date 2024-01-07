@@ -5,7 +5,9 @@ attribute vec2 a_texcoord;
 
 uniform mat4 ModelViewProjectionMatrix;
 
+
 varying vec2 v_texCoord;
+
 
 void main() {
     gl_Position = ModelViewProjectionMatrix * vec4(vertex, 1.0);
@@ -20,13 +22,23 @@ precision mediump float;
 varying vec2 v_texCoord;
 uniform sampler2D u_texture;
 uniform float u_textureRotation;
+uniform vec2 u_rotationPoint;
+
+vec2 rotatePoint(vec2 point, vec2 center, float angleRadians) {
+
+    vec2 translatedPoint = point - center;
+    float s = sin(angleRadians);
+    float c = cos(angleRadians);
+    vec2 rotatedPoint;
+    rotatedPoint.x = translatedPoint.x * c - translatedPoint.y * s;
+    rotatedPoint.y = translatedPoint.x * s + translatedPoint.y * c;
+    return rotatedPoint + center;
+}
+
 
 void main() {
-    // Rotate texture coordinates around the center
-    vec2 rotatedTexCoord = vec2(
-        (v_texCoord.x - 0.5) * cos(u_textureRotation) - (v_texCoord.y - 0.5) * sin(u_textureRotation) + 0.5,
-        (v_texCoord.x - 0.5) * sin(u_textureRotation) + (v_texCoord.y - 0.5) * cos(u_textureRotation) + 0.5
-    );
+ 
+    vec2 rotatedTexCoord = rotatePoint(v_texCoord, u_rotationPoint, u_textureRotation);
 
     // Fetch texel from the texture
     vec4 texColor = texture2D(u_texture, rotatedTexCoord);
@@ -34,6 +46,7 @@ void main() {
 
     // Output the color from the texture
     gl_FragColor = texColor;
+    
 }`;
 
 

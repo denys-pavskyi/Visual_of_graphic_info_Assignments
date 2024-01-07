@@ -18,6 +18,7 @@ let fi = Math.PI / 4;
 let rMax = 1.5; // Maximum r value
 let normals = [];
 
+let texturePoint = {x: 0.0, y: 0.0, z: 0.0 };
 
 let rotate_texture_value = 0.0;
 let point_on_surface = {u: 0.5, v: 0.5};
@@ -131,11 +132,13 @@ function Model(name) {
     }
 
     this.TextureBufferData = function (normals) {
+        
+
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iTextureBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STREAM_DRAW);
 
-        this.countText = normals.length / 3;
+        this.countText = normals.length / 2;
     }
 
 
@@ -157,8 +160,13 @@ function Model(name) {
         gl.enableVertexAttribArray(shProgram.aTexCoord);
 
         gl.uniform1i(shProgram.uTexture, 0);
-        gl.uniform1f(shProgram.uTextureRotation, rotate_texture_value);
+        gl.uniform1f(shProgram.uTextureRotation, deg2rad(rotate_texture_value));
         gl.enable(gl.TEXTURE_2D);
+
+        let u = map(point_on_surface.u, 0, u_max, 0, 1);
+        let v = map(point_on_surface.v, 0, v_max, 0, 1);
+
+        gl.uniform2fv(shProgram.uRotationPoint, [u, v]);
         gl.uniform1f(shProgram.iRotateValue, 0);
 
         gl.drawArrays(gl.TRIANGLES, 0, this.count);
@@ -181,7 +189,7 @@ function ShaderProgram(name, program) {
     
     // Get uniform locations
     this.uTexture = -1;
-
+    this.uRotationPoint = -1;
 
     // Get attribute location for texture coordinates
     this.aTexCoord = -1;
@@ -220,7 +228,6 @@ function Sphere(name, program){
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(this.program.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(this.program.iAttribVertex);
-
 
 
         gl.drawArrays(gl.LINE_STRIP, 0, this.count);
@@ -362,37 +369,19 @@ function CreateSurfaceData()
                 avg_nor.z+=all_nor[i-1][j].z;
             }
 
-            normals.push(avg_nor.x/cnt, avg_nor.y/cnt,avg_nor.z/cnt)
+            normals.push(avg_nor.x/cnt, avg_nor.y/cnt,avg_nor.z/cnt);
 
 
         }
     }
+
+    
     
     return vertexList;
 }
 
 
-function CreateTextureCoordinates(numPointsU, numPointsV) {
-    const textureCoords = [];
 
-    for (let i = 0; i < numPointsU; i++) {
-        for (let j = 0; j < numPointsV; j++) {
-            const u1 = i / (numPointsU - 1); // U coordinate
-            const v1 = j / (numPointsV - 1); // V coordinate
-
-            // Push texture coordinates for the current quad
-            textureCoords.push(u1, v1);
-            textureCoords.push(u1 + 1 / numPointsU, v1);
-            textureCoords.push(u1, v1 + 1 / numPointsV);
-
-            textureCoords.push(u1 + 1 / numPointsU, v1);
-            textureCoords.push(u1, v1 + 1 / numPointsV);
-            textureCoords.push(u1 + 1 / numPointsU, v1 + 1 / numPointsV);
-        }
-    }
-
-    return textureCoords;
-}
 
 function vec3_CrossProduct(a, b) {
     let x = a.y * b.z - b.y * a.z;
@@ -465,7 +454,7 @@ function initGL_Surface(){
     shProgram.Use();
     shProgram.iAttribVertex = gl.getAttribLocation(prog, "vertex");
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
-    
+    shProgram.uRotationPoint = gl.getUniformLocation(prog, 'u_rotationPoint');
     shProgram.uTexture = gl.getUniformLocation(prog, "u_texture");
     shProgram.uTextureRotation = gl.getUniformLocation(prog, "u_textureRotation");
 
@@ -475,11 +464,49 @@ function initGL_Surface(){
     surface = new Model('Surface');
     surface.BufferData(CreateSurfaceData());
     LoadTexture();
-    surface.TextureBufferData(CreateTextureCoordinates(numPointsU,numPointsV));
+    surface.TextureBufferData(CreateTexture());
     
 }
 
+function CreateTexture() {
+    let texture = [];
 
+    let u = 0;
+    let v = 0;
+    let uMax = u_max;
+    let vMax = v_max;
+    let uStep = u_max / numPointsU;
+    let vStep = v_max / numPointsV;
+
+    for (let u = 0; u <= u_max; u += uStep) {
+        for (let v = 0; v <= v_max; v += vStep) {
+            let u1 = map(u, 0, uMax, 0, 1)
+            let v1 = map(v, 0, vMax, 0, 1)
+            texture.push(u1, v1)
+            u1 = map(u + uStep, 0, uMax, 0, 1)
+            texture.push(u1, v1)
+            u1 = map(u, 0, uMax, 0, 1)
+            v1 = map(v + vStep, 0, vMax, 0, 1)
+            texture.push(u1, v1)
+            u1 = map(u + uStep, 0, uMax, 0, 1)
+            v1 = map(v, 0, vMax, 0, 1)
+            texture.push(u1, v1)
+            v1 = map(v + vStep, 0, vMax, 0, 1)
+            texture.push(u1, v1)
+            u1 = map(u, 0, uMax, 0, 1)
+            v1 = map(v + vStep, 0, vMax, 0, 1)
+            texture.push(u1, v1)
+        }
+    }
+    console.log(texture.length);
+    return texture;
+}
+
+function map(val, f1, t1, f2, t2) {
+    let m;
+    m = (val - f1) * (t2 - f2) / (t1 - f1) + f2
+    return Math.min(Math.max(m, f2), t2);
+}
 
 /* Creates a program for use in the WebGL context gl, and returns the
  * identifier for that program.  If an error occurs while compiling or
@@ -574,8 +601,9 @@ window.onkeydown = (e) => {
     point_on_surface.v = Math.max(v_min, Math.min(point_on_surface.v, v_max))
 
     sphere = new Sphere("Sphere", sphereProgram);
-    let pnt = calculatePointOnSurface(point_on_surface.u, point_on_surface.v);
-    sphere.BufferData(CreateSphereSurface(pnt.x, pnt.y, pnt.z, 0.1));
+    texturePoint = calculatePointOnSurface(point_on_surface.u, point_on_surface.v);
+
+    sphere.BufferData(CreateSphereSurface(texturePoint.x, texturePoint.y, texturePoint.z, 0.1));
     draw();
 }
 
